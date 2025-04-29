@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'RoadDataset'
-data_root = '/root/autodl-tmp/roaddataset/mass'
+data_root = '/root/autodl-tmp/roaddataset/deepglobe'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -17,7 +17,7 @@ train_pipeline = [
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(1500, 1500), keep_ratio=True),
+    dict(type='Resize', scale=(1024, 1024), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
     dict(type='LoadAnnotations', reduce_zero_label=False),
@@ -63,16 +63,17 @@ val_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
         pipeline=test_pipeline))
-test_dataloader = dict(
-    batch_size=1,
-    num_workers=4,
-    persistent_workers=True,
-    sampler=dict(type='DefaultSampler', shuffle=False),
-    dataset=dict(
-        type=dataset_type,
-        data_root=data_root,
-        data_prefix=dict(img_path='images/test', seg_map_path='annotations/test'),
-        pipeline=test_pipeline))
+test_dataloader = val_dataloader
+# test_dataloader = dict(
+#     batch_size=1,
+#     num_workers=4,
+#     persistent_workers=True,
+#     sampler=dict(type='DefaultSampler', shuffle=False),
+#     dataset=dict(
+#         type=dataset_type,
+#         data_root=data_root,
+#         data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
+#         pipeline=tta_pipeline))
 
 
 val_evaluator = dict(

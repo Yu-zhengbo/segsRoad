@@ -1,10 +1,11 @@
 _base_ = [
-    '../_base_/datasets/mass.py',
+    '../_base_/datasets/deepglobe.py',
     '../_base_/default_runtime.py',
-    '../_base_/schedules/schedule_80k.py'
+    '../_base_/schedules/schedule_40k.py'
 ]
-checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/' \
-                  'swin_small_patch4_window7_224_20220317-7ba6d6dd.pth'  # noqa
+custom_imports = dict(imports='mmpretrain.models', allow_failed_imports=False)
+checkpoint_file = 'https://download.openmmlab.com/mmclassification/v0/convnext/downstream/convnext-base_3rdparty_32xb128-noema_in1k_20220301-2a0ee547.pth'  # noqa
+
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 backbone_norm_cfg = dict(type='LN', requires_grad=True)
@@ -19,37 +20,24 @@ data_preprocessor = dict(
     size=crop_size)
 model = dict(
     type='DDP',
-    data_preprocessor=data_preprocessor,
     timesteps=3,
     bit_scale=0.01,
     accumulation=True,
     pretrained=None,
     backbone=dict(
-        type='DSwinTransformer',
-        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file),
-        pretrain_img_size=224,
-        in_channels=3,
-        embed_dims=96,
-        patch_size=4,
-        window_size=7,
-        mlp_ratio=4,
-        depths=[2, 2, 18, 2],
-        num_heads=[3, 6, 12, 24],
-        strides=(4, 2, 2, 2),
-        out_indices=(0, 1, 2, 3),
-        qkv_bias=True,
-        qk_scale=None,
-        patch_norm=True,
-        drop_rate=0.,
-        attn_drop_rate=0.,
-        drop_path_rate=0.3,
-        use_abs_pos_embed=False,
-        act_cfg=dict(type='GELU'),
-        norm_cfg=backbone_norm_cfg),
+        type='mmpretrain.ConvNeXt',
+        arch='base',
+        out_indices=[0, 1, 2, 3],
+        drop_path_rate=0.4,
+        layer_scale_init_value=1.0,
+        gap_before_final_norm=False,
+        init_cfg=dict(
+            type='Pretrained', checkpoint=checkpoint_file,
+            prefix='backbone.')),
     neck=[
         dict(
             type='FPN',
-            in_channels=[96, 192, 384, 768],
+            in_channels=[128, 256, 512, 1024],
             out_channels=256,
             act_cfg=None,
             norm_cfg=dict(type='GN', num_groups=32),
@@ -118,24 +106,19 @@ model = dict(
             loss_weight=1.0)),
     # model training and testing settings
     train_cfg=dict(),
-    test_cfg=dict(mode='whole')
-    # test_cfg=dict(mode='slide', crop_size=(1024,1024), stride=(512, 512)),
-    )
-
-
-
+    test_cfg=dict(mode='whole'))
 optim_wrapper = dict(
     _delete_=True,
-    type='OptimWrapper',
+    type='AmpOptimWrapper',
     optimizer=dict(
-        type='AdamW', lr=0.00006, betas=(0.9, 0.999), weight_decay=0.01),
-    paramwise_cfg=dict(
-        custom_keys={
-            'pos_block': dict(decay_mult=0.),
-            'norm': dict(decay_mult=0.),
-            'head': dict(lr_mult=1.)
-        }),
-    clip_grad=dict(max_norm=0.1, norm_type=2))
+        type='AdamW', lr=0.0001, betas=(0.9, 0.999), weight_decay=0.05),
+    paramwise_cfg={
+        'decay_rate': 0.9,
+        'decay_type': 'stage_wise',
+        'num_layers': 12
+    },
+    constructor='LearningRateDecayOptimizerConstructor',
+    loss_scale='dynamic')
 
 param_scheduler = [
     dict(
@@ -149,9 +132,8 @@ param_scheduler = [
         by_epoch=False,
     )
 ]
-train_dataloader = dict(batch_size=2, num_workers=1)
+train_dataloader = dict(batch_size=11, num_workers=11)
 val_dataloader = dict(batch_size=1, num_workers=1)
-# test_dataloader = val_dataloader
+test_dataloader = val_dataloader
 
-
-# train_cfg = dict(type='IterBasedTrainLoop', max_iters=80000, val_interval=1000)
+checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=8000),
