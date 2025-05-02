@@ -27,11 +27,15 @@ from .vpd import VPD
 from .dswin import DSwinTransformer
 from .vim import VisionMambaSeg
 from .vmamba import Backbone_VSSM
+from .plainmamba import PlainMambaSeg
+from .localvmamba import Backbone_LocalVSSM
+from .damamba import DAMamba_tiny, DAMamba_small, DAMamba_base
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
     'ResNeSt', 'MobileNetV2', 'UNet', 'CGNet', 'MobileNetV3',
     'VisionTransformer', 'SwinTransformer', 'MixVisionTransformer',
     'BiSeNetV1', 'BiSeNetV2', 'ICNet', 'TIMMBackbone', 'ERFNet', 'PCPVT',
     'SVT', 'STDCNet', 'STDCContextPathNet', 'BEiT', 'MAE', 'PIDNet', 'MSCAN',
-    'DDRNet', 'VPD', 'DSwinTransformer','VisionMambaSeg','Backbone_VSSM'
+    'DDRNet', 'VPD', 'DSwinTransformer','VisionMambaSeg','Backbone_VSSM','PlainMambaSeg',
+    'Backbone_LocalVSSM','DAMamba_tiny','DAMamba_small','DAMamba_base'
 ]
