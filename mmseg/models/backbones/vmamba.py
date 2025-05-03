@@ -662,6 +662,9 @@ class SS2Dv2:
             x = self.conv2d(x) # (b, d, h, w)
         x = self.act(x)
         y = self.forward_core(x)
+        # local scan
+        # x1 = x.view(6,256,128//8,8,128//8,8).permute(0,1,4,2,5,3).reshape(6,256,128,128)
+        # y1 = self.forward_core(x1)
         y = self.out_act(y)
         if not self.disable_z:
             y = y * z

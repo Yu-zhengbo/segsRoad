@@ -186,7 +186,23 @@ class DDP(EncoderDecoder):
             losses.update(loss_aux)
         return losses
 
+    def _forward(self,
+                inputs,
+                data_samples = None):
 
+        x = self.extract_feat(inputs)[0]
+        if self.diffusion == "ddim":
+            out = self.ddim_sample(x, data_samples)
+        elif self.diffusion == 'ddpm':
+            out = self.ddpm_sample(x, data_samples)
+        else:
+            raise NotImplementedError
+        out = resize(
+            input=out,
+            size=inputs.shape[2:],
+            mode='bilinear',
+            align_corners=self.align_corners)
+        return out
 
     def _decode_head_forward_train(self, x, t, img_metas, gt_semantic_seg):
         """Run forward function and calculate loss for decode head in

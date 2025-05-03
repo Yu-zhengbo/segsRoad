@@ -271,7 +271,7 @@ def local_scan_bchw(x, w=7, H=14, W=14, flip=False, column_first=False):
         column_first: column-wise scan first (the additional direction in VMamba)
     Return: [B, C, L]
     """
-    B, C, _, _ = x.shapes
+    B, C, _, _ = x.shape
     Hg, Wg = math.ceil(H / w), math.ceil(W / w)
     if H % w != 0 or W % w != 0:
         newH, newW = Hg * w, Wg * w

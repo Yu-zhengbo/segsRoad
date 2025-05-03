@@ -21,7 +21,7 @@ model = dict(
     pretrained=None,
     backbone=dict(
         pretrained='weights/DAMamba-B.pth',
-        type='DAMamba_base',
+        type='DAMambaForRoad',
     ),
     decode_head=dict(
         type='UPerHead',
