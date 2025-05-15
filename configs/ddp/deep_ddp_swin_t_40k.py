@@ -1,10 +1,10 @@
 _base_ = [
     '../_base_/datasets/deepglobe.py',
     '../_base_/default_runtime.py',
-    '../_base_/schedules/schedule_20k.py'
+    '../_base_/schedules/schedule_40k.py'
 ]
-checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/' \
-                  'swin_small_patch4_window7_224_20220317-7ba6d6dd.pth'  # noqa
+# checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/' \
+#                   'swin_small_patch4_window7_224_20220317-7ba6d6dd.pth'  # noqa
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 backbone_norm_cfg = dict(type='LN', requires_grad=True)
@@ -26,14 +26,14 @@ model = dict(
     pretrained=None,
     backbone=dict(
         type='SwinTransformer',
-        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file),
+        # init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file),
         pretrain_img_size=224,
         in_channels=3,
         embed_dims=96,
         patch_size=4,
         window_size=7,
         mlp_ratio=4,
-        depths=[2, 2, 18, 2],
+        depths=[2, 2, 6, 2],
         num_heads=[3, 6, 12, 24],
         strides=(4, 2, 2, 2),
         out_indices=(0, 1, 2, 3),
@@ -78,7 +78,7 @@ model = dict(
             use_sigmoid=False,
             loss_weight=0.4)),
     decode_head=dict(
-        type='DeformableHeadWithTimeConnect',
+        type='DeformableHeadWithTime',
         in_channels=[256],
         channels=256,
         in_index=[0],
@@ -87,33 +87,25 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         num_feature_levels=1,
-        # encoder=dict(
-        #     type='DetrTransformerEncoder',
-        #     num_layers=6,
-        #     transformerlayers=dict(
-        #         type='BaseTransformerLayer',
-        #         use_time_mlp=True,
-        #         attn_cfgs=dict(
-        #             type='MultiScaleDeformableAttention',
-        #             embed_dims=256,
-        #             num_levels=1,
-        #             num_heads=8,
-        #             dropout=0.),
-        #         ffn_cfgs=dict(
-        #             type='FFN',
-        #             embed_dims=256,
-        #             feedforward_channels=1024,
-        #             ffn_drop=0.,
-        #             act_cfg=dict(type='GELU')),
-        #         operation_order=('self_attn', 'norm', 'ffn', 'norm'))
-        # ),
-        encoder = dict(
-            type='MambaDDPSequence',
-            in_chs = 256,
-            depth=6,
-            token_mixer='DASSM',
-            head_dim=16,
-            mlp_ratio=4
+        encoder=dict(
+            type='DetrTransformerEncoder',
+            num_layers=6,
+            transformerlayers=dict(
+                type='BaseTransformerLayer',
+                use_time_mlp=True,
+                attn_cfgs=dict(
+                    type='MultiScaleDeformableAttention',
+                    embed_dims=256,
+                    num_levels=1,
+                    num_heads=8,
+                    dropout=0.),
+                ffn_cfgs=dict(
+                    type='FFN',
+                    embed_dims=256,
+                    feedforward_channels=1024,
+                    ffn_drop=0.,
+                    act_cfg=dict(type='GELU')),
+                operation_order=('self_attn', 'norm', 'ffn', 'norm'))
         ),
         positional_encoding=dict(
             type='SinePositionalEncoding',
@@ -153,13 +145,13 @@ param_scheduler = [
         eta_min=0.0,
         power=1.0,
         begin=1500,
-        end=20000,
+        end=80000,
         by_epoch=False,
     )
 ]
-train_dataloader = dict(batch_size=2, num_workers=1)
+train_dataloader = dict(batch_size=4, num_workers=4)
 val_dataloader = dict(batch_size=1, num_workers=1)
-test_dataloader = val_dataloader
+# test_dataloader = val_dataloader
 checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=8000),
 
 # train_cfg = dict(type='IterBasedTrainLoop', max_iters=80000, val_interval=1000)
