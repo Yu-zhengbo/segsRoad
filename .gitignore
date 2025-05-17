@@ -122,3 +122,10 @@ mmseg/.mim
 *.whl
 weights
 1.py
+
+
+*.jpg
+*.npy
+segroadv3
+results
+show_dsmamba.py
