@@ -2,7 +2,7 @@
 from argparse import ArgumentParser
 
 from mmseg.apis import MMSegInferencer
-
+import os
 
 def main():
     parser = ArgumentParser()
@@ -42,13 +42,23 @@ def main():
         device=args.device)
 
     # test a single image
-    mmseg_inferencer(
-        args.img,
-        show=args.show,
-        out_dir=args.out_dir,
-        opacity=args.opacity,
-        with_labels=args.with_labels)
-
+    if os.path.isfile(args.img):
+        mmseg_inferencer(
+            args.img,
+            show=args.show,
+            out_dir=args.out_dir,
+            opacity=args.opacity,
+            with_labels=args.with_labels)
+    elif os.path.isdir(args.img):
+        image_path = args.img
+        image_path = [os.path.join(image_path,i) for i in os.listdir(image_path)]
+        for image_path_temp in image_path:
+            mmseg_inferencer(
+                image_path_temp,
+                show=args.show,
+                out_dir=args.out_dir,
+                opacity=args.opacity,
+                with_labels=args.with_labels)
 
 if __name__ == '__main__':
     main()
