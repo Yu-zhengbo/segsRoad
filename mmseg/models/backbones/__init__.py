@@ -31,6 +31,8 @@ from .plainmamba import PlainMambaSeg
 from .localvmamba import Backbone_LocalVSSM
 from .damamba import DAMamba_tiny, DAMamba_small, DAMamba_base
 from .dmambaforroad import DAMambaForRoad
+from .deformable_vmamba import DeformableVMAMBA
+from .deformable_vmamba_unfold import DeformableAggregateVMAMBA
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
     'ResNeSt', 'MobileNetV2', 'UNet', 'CGNet', 'MobileNetV3',
@@ -38,5 +40,6 @@ __all__ = [
     'BiSeNetV1', 'BiSeNetV2', 'ICNet', 'TIMMBackbone', 'ERFNet', 'PCPVT',
     'SVT', 'STDCNet', 'STDCContextPathNet', 'BEiT', 'MAE', 'PIDNet', 'MSCAN',
     'DDRNet', 'VPD', 'DSwinTransformer','VisionMambaSeg','Backbone_VSSM','PlainMambaSeg',
-    'Backbone_LocalVSSM','DAMamba_tiny','DAMamba_small','DAMamba_base','DAMambaForRoad'
+    'Backbone_LocalVSSM','DAMamba_tiny','DAMamba_small','DAMamba_base','DAMambaForRoad',
+    'DeformableVMAMBA', 'DeformableAggregateVMAMBA'
 ]
