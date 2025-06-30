@@ -2,7 +2,7 @@
 import warnings
 from pathlib import Path
 from typing import Dict, Optional, Union
-
+from PIL import Image
 import mmcv
 import mmengine.fileio as fileio
 import numpy as np
@@ -769,3 +769,105 @@ class LoadImageFromNpyFile(LoadImageFromFile):
         results['img_shape'] = img.shape[:2]
         results['ori_shape'] = img.shape[:2]
         return results
+
+
+@TRANSFORMS.register_module()
+class LoadMultiImagesFromFile(LoadImageFromFile):
+    """Load two Remote Sensing mage from file.
+
+    Required Keys:
+
+    - img_path
+    - img_path2
+
+    Modified Keys:
+
+    - img
+    - img2
+    - img_shape
+    - ori_shape
+
+    Args:
+        to_float32 (bool): Whether to convert the loaded image to a float32
+            numpy array. If set to False, the loaded image is a float64 array.
+            Defaults to True.
+    """
+
+    def __init__(self,
+                 to_float32: bool = False,
+                 color_type: str = 'color',
+                 imdecode_backend: str = 'cv2',
+                 file_client_args: Optional[dict] = None,
+                 ignore_empty: bool = False,
+                 *,
+                 backend_args: Optional[dict] = None) -> None:
+        super().__init__(
+            to_float32=to_float32,
+            color_type=color_type,
+            imdecode_backend=imdecode_backend,
+            file_client_args=file_client_args,
+            ignore_empty=ignore_empty,
+            backend_args=backend_args)
+    
+
+    def transform(self, results: Dict) -> Dict:
+        """Functions to load image.
+
+        Args:
+            results (dict): Result dict from :obj:``mmcv.BaseDataset``.
+
+        Returns:
+            dict: The dict contains loaded image and meta information.
+        """
+        filename = results['img_path']
+        filename2 = results['dem_path']
+        img = self.read_img(filename)
+        img2 = self.read_dem(filename2)
+        results['img'] = img
+        results['img2'] = img2
+        results['img_fields'] = ['img','img2']
+        results['img_shape'] = img.shape[:2]
+        results['ori_shape'] = img.shape[:2]
+        return results
+
+    def read_img(self, filename: str):
+        try:
+            if self.file_client_args is not None:
+                file_client = fileio.FileClient.infer_client(
+                    self.file_client_args, filename)
+                img_bytes = file_client.get(filename)
+            else:
+                img_bytes = fileio.get(
+                    filename, backend_args=self.backend_args)
+            img = mmcv.imfrombytes(
+                img_bytes, flag=self.color_type, backend=self.imdecode_backend)
+        except Exception as e:
+            if self.ignore_empty:
+                return None
+            else:
+                raise e
+        # in some cases, images are not read successfully, the img would be
+        # `None`, refer to https://github.com/open-mmlab/mmpretrain/issues/1427
+        assert img is not None, f'failed to load image: {filename}'
+        if self.to_float32:
+            img = img.astype(np.float32)
+        return img
+    
+    def read_dem(self, filename: str):
+        try:
+            img = Image.open(filename)
+            img = np.array(img,dtype=np.float32)
+            img = np.expand_dims(img, axis=-1)
+        except Exception as e:
+            raise e
+        # in some cases, images are not read successfully, the img would be
+        # `None`, refer to https://github.com/open-mmlab/mmpretrain/issues/1427
+        assert img is not None, f'failed to load image: {filename}'
+        if self.to_float32:
+            img = img.astype(np.float32)
+        return img
+
+    def __repr__(self):
+        repr_str = (f'{self.__class__.__name__}('
+                    f'to_float32={self.to_float32})')
+        return repr_str

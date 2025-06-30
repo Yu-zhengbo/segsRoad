@@ -20,6 +20,29 @@ from mmseg.registry import MODELS
 from ..utils.embed import PatchEmbed, PatchMerging
 
 
+def transfer_model(pretrained_dict, model):
+    model_dict = model.state_dict()  # get model dict
+    # 在合并前(update),需要去除pretrained_dict一些不需要的参数
+    pretrained_dict = transfer_state_dict(pretrained_dict, model_dict)
+    model_dict.update(pretrained_dict)  # 更新(合并)模型的参数
+    return model_dict
+
+
+def transfer_state_dict(pretrained_dict, model_dict):
+    # state_dict2 = {k: v for k, v in save_model.items() if k in model_dict.keys()}
+    state_dict = {}
+    for k, v in pretrained_dict.items():
+        if k in model_dict.keys():
+            if v.shape==model_dict[k].shape:
+                state_dict[k] = v
+            else:
+                print(k,'shape dismatch')
+        else:
+            print("Missing key(s) in state_dict :{}".format(k))
+    return state_dict
+
+
+
 class WindowMSA(BaseModule):
     """Window based multi-head self-attention (W-MSA) module with relative
     position bias.
@@ -734,7 +757,14 @@ class SwinTransformer(BaseModule):
                             nH2, L2).permute(1, 0).contiguous()
 
             # load state_dict
-            self.load_state_dict(state_dict, strict=False)
+            try:
+                self.load_state_dict(state_dict, strict=False)
+            except Exception as e:
+                print(f'Error in loading {self.__class__.__name__}:')
+                # print('dont load')
+                state_dict_temp = transfer_model(state_dict,self)
+                self.load_state_dict(state_dict_temp, strict=False)
+                print(f'load successfully')
 
     def forward(self, x):
         x, hw_shape = self.patch_embed(x)
