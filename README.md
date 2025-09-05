@@ -1,6 +1,6 @@
 # Mamba Meets Diffusion: SegRoadv3 for Fine-Grained Road Extraction in Remote Sensing Imagery
 
-Zhengbo Yu, Zhe Chen, binbin Li, RuiTing Hu, Xingyu Bai, Qiaoran He, Li Sun, Zhongchang Sun, i, Keyan Xiao, Huadong Guo
+Zhengbo Yu, Zhe Chen, binbin Li, RuiTing Hu, Xingyu Bai, Qiaoran He, Li Sun, Zhongchang Sun, Keyan Xiao, Huadong Guo
 <td align="center">Under Review</td>
 
 
