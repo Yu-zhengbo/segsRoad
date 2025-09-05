@@ -1,38 +1,22 @@
 _base_ = [
-    '../_base_/models/upernet_swin.py', '../_base_/datasets/deepglobe.py',
+    '../_base_/models/upernet_swin.py', '../_base_/datasets/landslide500.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 crop_size = (512, 512)
-data_preprocessor = dict(
-    type='SegDataPreProcessor',
-    mean=[123.675, 116.28, 103.53],
-    std=[58.395, 57.12, 57.375],
-    bgr_to_rgb=True,
-    pad_val=0,
-    seg_pad_val=255,
-    size=crop_size)
+data_preprocessor = dict(size=crop_size)
+checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_tiny_patch4_window7_224_20220317-1cdeb081.pth'  # noqa
 model = dict(
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='Backbone_VSSM',
-        out_indices=(0, 1, 2, 3),
-        pretrained="/root/autodl-tmp/segsroad_model_weights/upernet_vssm_4xb4-160k_ade20k-512x512_base_iter_160000.pth",
-        # copied from classification/configs/vssm/vssm_base_224.yaml
-        dims=128,
-        depths=(2, 2, 15, 2),
-        ssm_d_state=1,
-        ssm_dt_rank="auto",
-        ssm_ratio=2.0,
-        ssm_conv=3,
-        ssm_conv_bias=False,
-        forward_type="v05_noz", # v3_noz,
-        mlp_ratio=4.0,
-        downsample_version="v3",
-        patchembed_version="v2",
-        drop_path_rate=0.6,
-        norm_layer="ln2d",
-        
-    ),
+        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file),
+        pretrain_img_size=384,
+        embed_dims=128,
+        depths=[2, 2, 18, 2],
+        num_heads=[4, 8, 16, 32],
+        window_size=12,
+        use_abs_pos_embed=False,
+        drop_path_rate=0.3,
+        patch_norm=True),
     decode_head=dict(in_channels=[128, 256, 512, 1024], num_classes=2),
     auxiliary_head=dict(in_channels=512, num_classes=2))
 
@@ -64,6 +48,6 @@ param_scheduler = [
 ]
 
 # By default, models are trained on 8 GPUs with 2 images per GPU
-train_dataloader = dict(batch_size=6, num_workers=6)
+train_dataloader = dict(batch_size=6)
 val_dataloader = dict(batch_size=1)
 test_dataloader = val_dataloader

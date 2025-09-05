@@ -6,12 +6,105 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mmengine.logging import print_log
 from torch import Tensor
-
+import torch
 from mmseg.registry import MODELS
 from mmseg.utils import (ConfigType, OptConfigType, OptMultiConfig,
                          OptSampleList, SampleList, add_prefix)
 from .base import BaseSegmentor
+from einops import rearrange
 
+class GatedFusion(nn.Module):
+    """
+    门控注意力融合模块 (Gated Attention Fusion)
+
+    该模块通过学习一个“门”(gate)，来动态地调整第二个模态(x_dem)特征的权重，
+    然后再将其与第一个模态(x)的特征相加。
+    这是一种高效的特征融合方式。
+    """
+    def __init__(self, in_channels_x, in_channels_dem):
+        super().__init__()
+        total_channels = in_channels_x + in_channels_dem
+        # 门控机制：使用一个简单的卷积网络来生成注意力权重
+        self.gate_conv = nn.Sequential(
+            nn.Conv2d(total_channels, total_channels // 2, kernel_size=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(total_channels // 2, in_channels_dem, kernel_size=1),
+            nn.Sigmoid()  # 使用Sigmoid将权重缩放到0-1之间
+        )
+
+    def forward(self, x, x_dem):
+        # 拼接两个模态的特征
+        combined_features = torch.cat([x, x_dem], dim=1)
+        # 计算门控权重
+        gate = self.gate_conv(combined_features)
+        # 将学习到的权重应用到DEM特征上，并与原始RGB特征相加
+        return x + (x_dem * gate)
+
+class CrossAttention(nn.Module):
+    """
+    显存优化的线性交叉注意力模块 (Memory-Efficient Linear Cross-Attention)
+
+    该模块通过改变注意力计算的顺序，避免了生成巨大的 (N x N) 注意力矩阵，
+    从而将空间复杂度从 O(N^2) 降低到 O(N)，显著减少显存占用。
+    它允许一个模态的特征(x)作为Query，去查询另一个模态(context)的特征。
+    """
+    def __init__(self, dim, heads=8, dim_head=64, dropout=0.):
+        super().__init__()
+        inner_dim = dim_head * heads
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        # 定义Q, K, V的投影层
+        self.to_q = nn.Linear(dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(dim, inner_dim, bias=False)
+
+        # 输出层
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        )
+
+    def forward(self, x, context):
+        """
+        x: 查询模态 (Query), e.g., RGB特征. shape: (b, c, h, w)
+        context: 键/值模态 (Key/Value), e.g., DEM特征. shape: (b, c, h, w)
+        """
+        b, c, h, w = x.shape
+        
+        # 将输入从 (b, c, h, w) 转换为 (b, n, c)，其中 n = h*w
+        x_flat = rearrange(x, 'b c h w -> b (h w) c')
+        context_flat = rearrange(context, 'b c h w -> b (h w) c')
+
+        # 计算 Q, K, V
+        q = self.to_q(x_flat)
+        k = self.to_k(context_flat)
+        v = self.to_v(context_flat)
+
+        # 将Q, K, V分割成多个头
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), [q, k, v])
+
+        # --- 核心优化点：线性注意力 ---
+        # 1. 对Key应用softmax进行归一化，而不是对整个QK^T矩阵
+        k = k.softmax(dim=-2) # 沿着序列长度n的维度进行softmax
+        
+        # 2. 先计算 K^T @ V, 得到一个与空间尺寸无关的小型上下文矩阵
+        # k.transpose(-2, -1) @ v -> (b, h, d_k, n) @ (b, h, n, d_v) -> (b, h, d_k, d_v)
+        context_matrix = torch.einsum('b h n d, b h n e -> b h d e', k, v)
+
+        # 3. 再用 Q @ (K^T @ V)
+        # (b, h, n, d_k) @ (b, h, d_k, d_v) -> (b, h, n, d_v)
+        out = torch.einsum('b h n d, b h d e -> b h n e', q, context_matrix)
+        
+        # 合并多头
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        out = self.to_out(out)
+        
+        # 重塑回原始图像形状
+        out = rearrange(out, 'b (h w) c -> b c h w', h=h, w=w)
+
+        # 使用残差连接，将注意力输出加回到原始的查询特征上
+        return x + out
 
 @MODELS.register_module()
 class MultiEncoderDecoder(BaseSegmentor):
@@ -72,8 +165,9 @@ class MultiEncoderDecoder(BaseSegmentor):
 
     def __init__(self,
                  backbone: ConfigType,
-                 backbone_dem: ConfigType,
                  decode_head: ConfigType,
+                 backbone_dem = None,
+                 fusion_mode = 'add',
                  neck: OptConfigType = None,
                  auxiliary_head: OptConfigType = None,
                  train_cfg: OptConfigType = None,
@@ -87,8 +181,39 @@ class MultiEncoderDecoder(BaseSegmentor):
             assert backbone.get('pretrained') is None, \
                 'both backbone and segmentor set pretrained weight'
             backbone.pretrained = pretrained
+
+        self.fusion_mode = fusion_mode
+        if self.fusion_mode == 'single':
+            pass
+        elif self.fusion_mode == 'concat':
+            embed_dims = backbone.embed_dims + backbone_dem.embed_dims
+            self.embed_dims2_to_1 = nn.ModuleList(
+                [nn.Sequential(
+                    nn.Conv2d(embed_dims*2**i, backbone.embed_dims*2**i, kernel_size=1, bias=False),
+                    nn.BatchNorm2d(backbone.embed_dims*2**i),
+                    nn.ReLU(inplace=True)
+                ) for i in range(4)]
+            )
+        elif self.fusion_mode == 'cross':
+            # pass
+            self.attention_list = nn.ModuleList(
+                [CrossAttention(backbone.embed_dims*2**i) for i in range(4)]
+            )
+        elif self.fusion_mode == 'attention':
+            self.attention_list = nn.ModuleList(
+                [GatedFusion(backbone.embed_dims*2**i, backbone_dem.embed_dims*2**i) for i in range(4)]
+            )
+        elif self.fusion_mode == 'add':
+            pass
+        else:
+            raise NotImplementedError
+
+        
         self.backbone = MODELS.build(backbone)
-        self.backbone_dem = MODELS.build(backbone_dem)
+        if backbone_dem is not None:
+            self.backbone_dem = MODELS.build(backbone_dem)
+        else:
+            self.backbone_dem = None
         if neck is not None:
             self.neck = MODELS.build(neck)
         self._init_decode_head(decode_head)
@@ -96,6 +221,9 @@ class MultiEncoderDecoder(BaseSegmentor):
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
+
+        
+        
 
         assert self.with_decode_head
 
@@ -162,9 +290,26 @@ class MultiEncoderDecoder(BaseSegmentor):
 
     def extract_feat(self, inputs: Tensor, dem: Tensor) -> List[Tensor]:
         """Extract features from images."""
-        x = self.backbone(inputs)
-        x_dem = self.backbone_dem(dem)
-        x = x + x_dem
+        if self.fusion_mode != 'single':
+            x = self.backbone(inputs)
+            x_dem = self.backbone_dem(dem)
+        else:
+            x = self.backbone(inputs, dem)
+        if self.fusion_mode == 'single':
+            pass
+        elif self.fusion_mode == 'add':
+            # x = x + x_dem
+            for i in range(len(x)):
+                x[i] += x_dem[i]
+        elif self.fusion_mode == 'concat':
+            for i in range(len(x)):
+                x[i] = self.embed_dims2_to_1[i](torch.cat([x[i], x_dem[i]], dim=1))
+        elif self.fusion_mode == 'cross' or self.fusion_mode == 'attention':
+            for i in range(len(x)):
+                x[i] = self.attention_list[i](x[i], x_dem[i])
+        else:
+            raise NotImplementedError
+        
         if self.with_neck:
             x = self.neck(x)
         return x

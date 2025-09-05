@@ -2587,7 +2587,7 @@ class RandomMultiResize(RandomResize):
                     img, scale_factor = mmcv.imrescale(
                         results[field],
                         results['scale'],
-                        interpolation=self.interpolation,
+                        interpolation='nearest',
                         return_scale=True,
                         backend=self.backend)
                     # the w_scale and h_scale has minor difference
@@ -2596,7 +2596,7 @@ class RandomMultiResize(RandomResize):
                     img, w_scale, h_scale = mmcv.imresize(
                         results[field],
                         results['scale'],
-                        interpolation=self.interpolation,
+                        interpolation='nearest',
                         return_scale=True,
                         backend=self.backend)
             results[field] = img
@@ -2684,14 +2684,14 @@ class MultiResize(Resize):
                 img2, scale_factor = mmcv.imrescale(
                     results['img2'],
                     results['scale'],
-                    interpolation=self.interpolation,
+                    interpolation='nearest',
                     return_scale=True,
                     backend=self.backend)
             else:
                 img2, w_scale, h_scale = mmcv.imresize(
                     results['img2'],
                     results['scale'],
-                    interpolation=self.interpolation,
+                    interpolation='nearest',
                     return_scale=True,
                     backend=self.backend)
             results['img2'] = img2

@@ -9,6 +9,8 @@ from mmseg.registry import MODELS
 from mmseg.utils import stack_batch
 import copy
 
+
+
 @MODELS.register_module()
 class SegDataPreProcessor(BaseDataPreprocessor):
     """Image pre-processor for segmentation tasks.
@@ -68,7 +70,6 @@ class SegDataPreProcessor(BaseDataPreprocessor):
     ):
         super().__init__()
         self.size = size
-        self.size_divisorsize_divisor = size_divisor
         self.size_divisor = size_divisor
         self.pad_val = pad_val
         self.seg_pad_val = seg_pad_val
@@ -150,7 +151,6 @@ class SegDataPreProcessor(BaseDataPreprocessor):
                 inputs = torch.stack(inputs, dim=0)
 
         return dict(inputs=inputs, data_samples=data_samples)
-
 
 @MODELS.register_module()
 class SegMultiDataPreProcessor(SegDataPreProcessor):

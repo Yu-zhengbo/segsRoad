@@ -859,7 +859,10 @@ class LoadMultiImagesFromFile(LoadImageFromFile):
             img = np.array(img,dtype=np.float32)
             img = np.expand_dims(img, axis=-1)
         except Exception as e:
-            raise e
+            try:
+                img = np.load(filename)
+            except Exception as e:
+                raise
         # in some cases, images are not read successfully, the img would be
         # `None`, refer to https://github.com/open-mmlab/mmpretrain/issues/1427
         assert img is not None, f'failed to load image: {filename}'

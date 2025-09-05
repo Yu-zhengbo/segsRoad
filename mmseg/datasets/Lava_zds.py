@@ -25,10 +25,11 @@ class LavaDataset(BaseSegDataset):
     def __init__(self,
                  img_suffix='.tif',
                  seg_map_suffix='.tif',
-                 dem_suffix='.tif',
+                 dem_suffix='.npy',
                  reduce_zero_label=False,
                  data_prefix: dict = dict(img_path='', seg_map_path='',dem_path=''),
                  **kwargs) -> None:
+        self.dem_suffix = dem_suffix
         super().__init__(
             img_suffix=img_suffix,
             seg_map_suffix=seg_map_suffix,
@@ -36,10 +37,8 @@ class LavaDataset(BaseSegDataset):
             data_prefix=data_prefix,
             **kwargs)
         
-        self.dem_suffix = dem_suffix
         
-
-
+        
     def load_data_list(self) -> List[dict]:
         """Load annotation from directory or annotation file.
 
@@ -61,7 +60,7 @@ class LavaDataset(BaseSegDataset):
                 backend_args=self.backend_args):
             data_info = dict(img_path=osp.join(img_dir, img))
             if dem_dir is not None:
-                dem_name = img[:-_suffix_len] + '.tif'
+                dem_name = img[:-_suffix_len] + self.dem_suffix
                 data_info['dem_path'] = osp.join(dem_dir, dem_name)
             if ann_dir is not None:
                 seg_map = img[:-_suffix_len] + self.seg_map_suffix

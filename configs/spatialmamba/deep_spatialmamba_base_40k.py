@@ -14,27 +14,16 @@ data_preprocessor = dict(
 model = dict(
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='Backbone_VSSM',
+        type='Backbone_SpatialMamba',
         out_indices=(0, 1, 2, 3),
-        pretrained="/root/autodl-tmp/segsroad_model_weights/upernet_vssm_4xb4-160k_ade20k-512x512_base_iter_160000.pth",
-        # copied from classification/configs/vssm/vssm_base_224.yaml
-        dims=128,
-        depths=(2, 2, 15, 2),
-        ssm_d_state=1,
-        ssm_dt_rank="auto",
-        ssm_ratio=2.0,
-        ssm_conv=3,
-        ssm_conv_bias=False,
-        forward_type="v05_noz", # v3_noz,
-        mlp_ratio=4.0,
-        downsample_version="v3",
-        patchembed_version="v2",
-        drop_path_rate=0.6,
-        norm_layer="ln2d",
-        
+        pretrained="/root/autodl-tmp/segsroad_model_weights/upernet_spatialmamba_4xb4-160k_ade20k-512x512_base_iter_160000.pth",
+        dims=96,
+        d_state=1,
+        depths=(2, 4, 21, 5),
+        drop_path_rate=0.5
     ),
-    decode_head=dict(in_channels=[128, 256, 512, 1024], num_classes=2),
-    auxiliary_head=dict(in_channels=512, num_classes=2))
+    decode_head=dict(in_channels=[96, 192, 384, 768], num_classes=2),
+    auxiliary_head=dict(in_channels=384, num_classes=2))
 
 # AdamW optimizer, no weight decay for position embedding & layer norm
 # in backbone

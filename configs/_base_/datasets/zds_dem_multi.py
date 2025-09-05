@@ -1,27 +1,28 @@
 # dataset settings
-dataset_type = 'RoadDataset'
+dataset_type = 'LavaDataset'
 data_root = '/root/autodl-tmp/roaddataset/karst_datasets'
 crop_size = (256, 256)
 train_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadMultiImagesFromFile'),
     dict(type='LoadAnnotations', reduce_zero_label=False),
     dict(
-        type='RandomResize',
+        type='RandomMultiResize',
         scale=(1024, 256),
         ratio_range=(0.5, 2.0),
         keep_ratio=True),
-    dict(type='RandomCrop', crop_size=crop_size),#, cat_max_ratio=0.75),
-    dict(type='RandomFlip', prob=0.5),
+    dict(type='RandomMultiCrop', crop_size=crop_size),#, cat_max_ratio=0.75),
+    dict(type='RandomMultiFlip', prob=0.5),
     dict(type='PhotoMetricDistortion'),
-    dict(type='PackSegInputs')
+    # dict(type='ConcatCDInput'),
+    dict(type='PackMultiSegInputs')
 ]
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(256, 256), keep_ratio=True),
+    dict(type='LoadMultiImagesFromFile'),
+    dict(type='MultiResize', scale=(256, 256), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
     dict(type='LoadAnnotations', reduce_zero_label=False),
-    dict(type='PackSegInputs')
+    dict(type='PackMultiSegInputs')
 ]
 
 
@@ -51,9 +52,10 @@ train_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         data_prefix=dict(
-            img_path='images/train', seg_map_path='annotations/train'),
+            img_path='images/train', seg_map_path='annotations/train', dem_path='dem_features/train'),
         img_suffix = '.tif',
         seg_map_suffix = '.tif',
+        dem_suffix = '.npy',
         pipeline=train_pipeline))
 val_dataloader = dict(
     batch_size=1,
@@ -63,9 +65,10 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
+        data_prefix=dict(img_path='images/val', seg_map_path='annotations/val', dem_path='dem_features/val'),
         img_suffix = '.tif',
         seg_map_suffix = '.tif',
+        dem_suffix = '.npy',
         pipeline=test_pipeline))
 # test_dataloader = val_dataloader
 test_dataloader = dict(
@@ -76,9 +79,10 @@ test_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(img_path='images/test', seg_map_path='annotations/test'),
+        data_prefix=dict(img_path='images/test', seg_map_path='annotations/test', dem_path='dem_features/test'),
         img_suffix = '.tif',
         seg_map_suffix = '.tif',
+        dem_suffix = '.npy',
         pipeline=test_pipeline))
 
 

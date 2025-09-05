@@ -38,7 +38,9 @@ from .vpd_depth_head import VPDDepthHead
 
 from .deformable_head_with_time import DeformableHeadWithTime
 from .deformable_head_with_time_connect import DeformableHeadWithTimeConnect
-
+from .mfa_uper_head import MFAUPerHead
+from .mfa_pcs_uper_head import MFAPCSUPerHead
+from .DenoiseUNet import DenoiseUNet
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
     'UPerHead', 'DepthwiseSeparableASPPHead', 'ANNHead', 'DAHead', 'OCRHead',
@@ -47,6 +49,7 @@ __all__ = [
     'SETRMLAHead', 'DPTHead', 'SETRMLAHead', 'SegmenterMaskTransformerHead',
     'SegformerHead', 'ISAHead', 'STDCHead', 'IterativeDecodeHead',
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
-    'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead'
-    ,'DeformableHeadWithTime','DeformableHeadWithTimeConnect'
+    'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
+    'DeformableHeadWithTime','DeformableHeadWithTimeConnect','MFAUPerHead',
+    'MFAPCSUPerHead','DenoiseUNet'
 ]

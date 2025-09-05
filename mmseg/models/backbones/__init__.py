@@ -33,6 +33,10 @@ from .damamba import DAMamba_tiny, DAMamba_small, DAMamba_base
 from .dmambaforroad import DAMambaForRoad
 from .deformable_vmamba import DeformableVMAMBA
 from .deformable_vmamba_unfold import DeformableAggregateVMAMBA
+from .spatialmamba import Backbone_SpatialMamba
+from .spiralmamba import DualMamba_base, DualMamba_small, DualMamba_tiny
+from .diagmamba import DualDiagMamba_base
+from .cross_damamba import CrossDAMamba_tiny, CrossDAMamba_small, CrossDAMamba_base
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
     'ResNeSt', 'MobileNetV2', 'UNet', 'CGNet', 'MobileNetV3',
@@ -41,5 +45,7 @@ __all__ = [
     'SVT', 'STDCNet', 'STDCContextPathNet', 'BEiT', 'MAE', 'PIDNet', 'MSCAN',
     'DDRNet', 'VPD', 'DSwinTransformer','VisionMambaSeg','Backbone_VSSM','PlainMambaSeg',
     'Backbone_LocalVSSM','DAMamba_tiny','DAMamba_small','DAMamba_base','DAMambaForRoad',
-    'DeformableVMAMBA', 'DeformableAggregateVMAMBA'
+    'DeformableVMAMBA', 'DeformableAggregateVMAMBA', 'Backbone_SpatialMamba',
+    'DualMamba_base', 'DualMamba_small', 'DualMamba_tiny', 'DualDiagMamba_base',
+    'CrossDAMamba_tiny', 'CrossDAMamba_small', 'CrossDAMamba_base'
 ]

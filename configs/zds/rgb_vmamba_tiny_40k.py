@@ -1,8 +1,8 @@
 _base_ = [
-    '../_base_/models/upernet_swin.py', '../_base_/datasets/deepglobe.py',
+    '../_base_/models/upernet_swin.py', '../_base_/datasets/zds.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
-crop_size = (512, 512)
+crop_size = (256, 256)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
     mean=[123.675, 116.28, 103.53],
@@ -16,10 +16,10 @@ model = dict(
     backbone=dict(
         type='Backbone_VSSM',
         out_indices=(0, 1, 2, 3),
-        pretrained="/root/autodl-tmp/segsroad_model_weights/upernet_vssm_4xb4-160k_ade20k-512x512_base_iter_160000.pth",
+        pretrained="/root/autodl-tmp/segsroad_model_weights/vssm1_tiny_0230s_ckpt_epoch_264.pth",
         # copied from classification/configs/vssm/vssm_base_224.yaml
-        dims=128,
-        depths=(2, 2, 15, 2),
+        dims=96,
+        depths=(2, 2, 8, 2),
         ssm_d_state=1,
         ssm_dt_rank="auto",
         ssm_ratio=2.0,
@@ -33,8 +33,8 @@ model = dict(
         norm_layer="ln2d",
         
     ),
-    decode_head=dict(in_channels=[128, 256, 512, 1024], num_classes=2),
-    auxiliary_head=dict(in_channels=512, num_classes=2))
+    decode_head=dict(in_channels=[96, 192, 384, 768], num_classes=2),
+    auxiliary_head=dict(in_channels=384, num_classes=2))
 
 # AdamW optimizer, no weight decay for position embedding & layer norm
 # in backbone
@@ -63,7 +63,14 @@ param_scheduler = [
     )
 ]
 
+default_hooks = dict(
+    timer=dict(type='IterTimerHook'),
+    logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=20000),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    visualization=dict(type='SegVisualizationHook'))
 # By default, models are trained on 8 GPUs with 2 images per GPU
-train_dataloader = dict(batch_size=6, num_workers=6)
+train_dataloader = dict(batch_size=8, num_workers=4)
 val_dataloader = dict(batch_size=1)
 test_dataloader = val_dataloader

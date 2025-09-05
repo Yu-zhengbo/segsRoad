@@ -7,7 +7,7 @@ from .multimodal_encoder_decoder import MultimodalEncoderDecoder
 from .seg_tta import SegTTAModel
 from .ddp import DDP
 from .multi_encoder_decoder import MultiEncoderDecoder
-
+from .segrefiner import SegRefiner
 __all__ = [
     'BaseSegmentor', 'EncoderDecoder', 'CascadeEncoderDecoder', 'SegTTAModel',
     'MultimodalEncoderDecoder', 'DepthEstimator','DDP', 'MultiEncoderDecoder'

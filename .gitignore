@@ -129,3 +129,10 @@ weights
 segroadv3
 results
 show_dsmamba.py
+normalization_stats.npz
+*.png
+show_dem.py
+dem2multi.py
+analysis_dataset.py
+Arial.ttf
+Times New Roman.ttf
