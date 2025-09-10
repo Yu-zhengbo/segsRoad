@@ -47,11 +47,11 @@ class SegRefiner(EncoderDecoder):
         # self.loss_texture = MODELS.build(loss_texture)
         self.num_classes = 2
         self.step = step
-
+        self.denoise_model_name = denoise_model.get('type')
         if denoise_model.get('type') == "DeformableHeadWithTime":
-
+            self.conv_patch = nn.Conv2d(4, 128, 4, 4, 0)
             learned_sinusoidal_dim = 16
-            time_dim = self.denoise_model.in_channels[0] * 4  # 1024
+            time_dim = 128 * 4  # 1024
             sinu_pos_emb = LearnedSinusoidalPosEmb(learned_sinusoidal_dim)
             fourier_dim = learned_sinusoidal_dim + 1
 
@@ -122,6 +122,7 @@ class SegRefiner(EncoderDecoder):
             losses = self.denoise_model.loss(inputs, time,
                                             data_samples)
         except:
+            inputs = self.conv_patch(inputs)
             gt_semantic_seg = torch.cat([data_samples[i].get('gt_sem_seg').data for i in range(len(data_samples))],dim=0).unsqueeze(1)
             input_times = self.time_mlp(time)
             losses = self.denoise_model.forward_train([inputs], input_times, data_samples, gt_semantic_seg,self.train_cfg)
@@ -164,7 +165,13 @@ class SegRefiner(EncoderDecoder):
         return res, fine_probs
 
     def p_sample(self, model_input, cur_fine_probs, t):
-        pred_logits = self.denoise_model(model_input, t)
+        if self.denoise_model_name == "DeformableHeadWithTime":
+            inputs = self.conv_patch(model_input)
+            input_times = self.time_mlp(t)
+            pred_logits = self.denoise_model([inputs], input_times)
+            pred_logits = F.interpolate(pred_logits, size=cur_fine_probs.shape[-2:])
+        else:
+            pred_logits = self.denoise_model(model_input, t)
         t = t[0].item()
         x_start_fine_probs = 2 * torch.abs(pred_logits.sigmoid() - 0.5)
         beta_cumprod = self.betas_cumprod[t]

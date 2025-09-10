@@ -6,6 +6,7 @@ from mmseg.registry import MODELS
 from mmseg.models.decode_heads.decode_head import BaseDecodeHead
 # from mmseg.ops import resize
 from ..utils import resize
+from .DenoiseUNet import TextureL1Loss
 
 try:
     from mmcv.ops.multi_scale_deform_attn import MultiScaleDeformableAttention
@@ -48,7 +49,7 @@ class DeformableHeadWithTime(BaseDecodeHead):
                                                  f' and {num_feats}.'
         # self.level_embeds = nn.Parameter(
         #     torch.Tensor(self.num_feature_levels, self.embed_dims))
-        
+        self.loss_texture = TextureL1Loss()
         self.init_weights()
     
     def init_weights(self):
@@ -151,6 +152,7 @@ class DeformableHeadWithTime(BaseDecodeHead):
         seg_logits = self(inputs, times)
         seg_logits = resize(seg_logits,size=gt_semantic_seg.shape[2:])
         losses = self.loss_by_feat(seg_logits, img_metas)
+        losses['texture_loss'] = self.loss_texture(seg_logits, gt_semantic_seg)
         return losses
     
     def forward_train_return_logits(self, inputs, times, img_metas, gt_semantic_seg, train_cfg):

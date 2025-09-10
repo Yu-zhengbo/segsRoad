@@ -47,15 +47,40 @@ python tools/test.py configs/segroad/deep_segroadv3.py /path/to/checkpoint_file
 python demo/image_demo_with_inferencer.py /path/to/image_or_dir/ configs/segroad/deep_segroadv3.py --checkpoint /path/to/checkpoint_file --output-dir /path/to/output_dir
 ````
 
+## Datasets Used
 
+This project utilizes two publicly available datasets for training and evaluation. Please refer to the original sources for downloading the data and for more detailed information.
 
-## </a>Citing SegRoadv3
+1.  **DeepGlobe Road Dataset**
+    * **Description**: A large-scale dataset for road extraction from high-resolution satellite imagery.
+    * **Homepage**: [http://deepglobe.org/challenge.html](http://deepglobe.org/challenge.html)
+    * **Citation**: 
+        ```
+        Demir, I., Koperski, K., Lindenbaum, D., et al. (2018). Deepglobe 2018: A challenge to parse the earth through satellite images. In Proceedings of the IEEE conference on computer vision and pattern recognition workshops.
+        ```
+
+2.  **CHN6-CUG Road Dataset**
+    * **Description**: A high-resolution road dataset covering various urban and rural scenes in China.
+    * **Homepage**: [https://grzy.cug.edu.cn/zhugiqi/zh_CN/index.htm](https://grzy.cug.edu.cn/zhugiqi/zh_CN/index.htm)
+    * **Citation**: 
+        ```
+        Zhu, Q., Wang, X., Zhang, Y., et al. (2021). A large-scale and high-resolution road dataset for deep learning-based road extraction. Remote Sensing, 13(21), 4447.
+        ```
+
+## Acknowledgements
+
+We extend our sincere gratitude to the creators of the DeepGlobe and CHN6-CUG datasets for making their valuable work publicly available. And this project is developed with reference to MMSegmentation, and VMamba. We would like to express our gratitude to the authors of MMSegmentation, DSMamba and VMamba for their contributions, which served as a valuable foundation and inspiration for our work. If you find this project helpful, please also consider citing or exploring the original repositories.
+
+<!-- ## </a>Citing SegRoadv3
 
 As the paper is under review, we will update the citation information when the paper is accepted.
 ```
 Mamba Meets Diffusion: SegRoadv3 for Fine-Grained Road Extraction in Remote Sensing Imagery
-```
+``` -->
 
-## Reference
 
-This project is developed with reference to MMSegmentation, and VMamba. We would like to express our gratitude to the authors of MMSegmentation, DSMamba and VMamba for their contributions, which served as a valuable foundation and inspiration for our work. If you find this project helpful, please also consider citing or exploring the original repositories.
+## License
+
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+
+This project is licensed under the CC BY 4.0 License. See the `LICENSE` file for details.
