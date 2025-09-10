@@ -10,6 +10,7 @@ import mmengine
 import numpy as np
 from mmcv.transforms import RandomFlip as MMCV_RandomFlip
 from mmcv.transforms import Resize as MMCV_Resize
+from mmcv.transforms import RandomResize
 from mmcv.transforms.base import BaseTransform
 from mmcv.transforms.utils import cache_randomness
 from mmengine.utils import is_tuple_of
@@ -18,7 +19,7 @@ from scipy.ndimage import gaussian_filter
 
 from mmseg.datasets.dataset_wrappers import MultiImageMixDataset
 from mmseg.registry import TRANSFORMS
-
+from mmcv.image.geometric import _scale_size
 try:
     import albumentations
     from albumentations import Compose
@@ -2534,4 +2535,188 @@ class RandomDepthMix(BaseTransform):
             raise ValueError(f'Invalid image shape ({img.shape})')
 
         results['img'] = img
+        return results
+
+
+
+@TRANSFORMS.register_module()
+class RandomMultiResize(RandomResize):
+    """随机缩放多个输入图像（如 RGB 和 DEM）
+
+    支持字段：
+    - 'img'、'img2'
+    - 'seg_map'
+
+    使用方式：
+    ```python
+    dict(type='RandomMultiResize', scale=(1024, 512), ratio_range=(0.5, 2.0), keep_ratio=True)
+    ```
+
+    要求 `results['img_fields'] = ['img', 'img2']` 在前面的 loader 中已设定。
+    """
+
+
+    def __init__(
+        self,
+        scale: Union[Tuple[int, int], Sequence[Tuple[int, int]]],
+        ratio_range: Tuple[float, float] = None,
+        resize_type: str = 'Resize',
+        interpolation: str = 'bilinear',
+        backend: str = 'cv2',
+        **resize_kwargs,
+    ) -> None:
+        super().__init__(scale, ratio_range, resize_type, **resize_kwargs)
+        self.keep_ratio = resize_kwargs.get('keep_ratio', True)
+        self.interpolation = interpolation
+        self.backend = backend
+ 
+
+    def transform(self, results):
+        # 读取图像字段
+        img_fields = copy.deepcopy( results.get('img_fields', ['img']))  # 默认只处理 'img'
+        results['scale'] = self._random_scale()
+        self.resize.scale = results['scale']
+        results = self.resize(results)
+
+        if 'img' in img_fields:
+            img_fields.remove('img')
+        
+        for field in img_fields:
+            if results.get(field, None) is not None:
+                if self.keep_ratio:
+                    img, scale_factor = mmcv.imrescale(
+                        results[field],
+                        results['scale'],
+                        interpolation='nearest',
+                        return_scale=True,
+                        backend=self.backend)
+                    # the w_scale and h_scale has minor difference
+                    # a real fix should be done in the mmcv.imrescale in the future
+                else:
+                    img, w_scale, h_scale = mmcv.imresize(
+                        results[field],
+                        results['scale'],
+                        interpolation='nearest',
+                        return_scale=True,
+                        backend=self.backend)
+            results[field] = img
+        return results
+
+
+
+@TRANSFORMS.register_module()
+class RandomMultiCrop(RandomCrop):
+    """Random crop the multiple input image & seg.
+    """
+
+    def __init__(self,
+                 crop_size: Union[int, Tuple[int, int]],
+                 cat_max_ratio: float = 1.,
+                 ignore_index: int = 255):
+        
+        super().__init__(
+            crop_size=crop_size,
+            cat_max_ratio=cat_max_ratio,
+            ignore_index=ignore_index)
+
+    def transform(self, results: dict) -> dict:
+        """Transform function to randomly crop images, semantic segmentation
+        maps.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Randomly cropped results, 'img_shape' key in result dict is
+                updated according to crop size.
+        """
+
+
+        crop_bbox = self.crop_bbox(results)
+
+        # crop semantic seg
+        for key in results.get('seg_fields', []):
+            results[key] = self.crop(results[key], crop_bbox)
+
+        img_fields = copy.deepcopy( results.get('img_fields', ['img']))  # 默认只处理 'img'
+
+        for field in img_fields:
+            if results.get(field, None) is not None:
+                results[field] = self.crop(results[field], crop_bbox)
+
+        results['img_shape'] = results['img'].shape[:2]
+        return results
+    
+@TRANSFORMS.register_module()
+class RandomMultiFlip(RandomFlip):
+    def _flip(self, results: dict) -> None:
+        """Flip images, bounding boxes and semantic segmentation map."""
+        # flip image
+
+        img_fields = copy.deepcopy( results.get('img_fields', ['img']))
+        for field in img_fields:
+            if results.get(field, None) is not None:
+                results[field] = mmcv.imflip(
+                    results[field], direction=results['flip_direction'])
+        img_shape = results['img'].shape[:2]
+
+        # flip bboxes
+        if results.get('gt_bboxes', None) is not None:
+            results['gt_bboxes'] = self._flip_bbox(results['gt_bboxes'],
+                                                   img_shape,
+                                                   results['flip_direction'])
+
+        # flip seg map
+        for key in results.get('seg_fields', []):
+            if results.get(key, None) is not None:
+                results[key] = self._flip_seg_map(
+                    results[key], direction=results['flip_direction']).copy()
+                results['swap_seg_labels'] = self.swap_seg_labels
+        
+
+@TRANSFORMS.register_module()
+class MultiResize(Resize):
+    def _resize_dem(self, results: dict) -> None:
+        """Resize images with ``results['scale']``."""
+
+        if results.get('img2', None) is not None:
+            if self.keep_ratio:
+                img2, scale_factor = mmcv.imrescale(
+                    results['img2'],
+                    results['scale'],
+                    interpolation='nearest',
+                    return_scale=True,
+                    backend=self.backend)
+            else:
+                img2, w_scale, h_scale = mmcv.imresize(
+                    results['img2'],
+                    results['scale'],
+                    interpolation='nearest',
+                    return_scale=True,
+                    backend=self.backend)
+            results['img2'] = img2
+
+    def transform(self, results: dict) -> dict:
+        """Transform function to resize images, bounding boxes, semantic
+        segmentation map and keypoints.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+        Returns:
+            dict: Resized results, 'img', 'gt_bboxes', 'gt_seg_map',
+            'gt_keypoints', 'scale', 'scale_factor', 'img_shape',
+            and 'keep_ratio' keys are updated in result dict.
+        """
+
+        if self.scale:
+            results['scale'] = self.scale
+        else:
+            img_shape = results['img'].shape[:2]
+            results['scale'] = _scale_size(img_shape[::-1],
+                                           self.scale_factor)  # type: ignore
+        self._resize_img(results)
+        self._resize_bboxes(results)
+        self._resize_seg(results)
+        self._resize_keypoints(results)
+        self._resize_dem(results)
         return results

@@ -3,16 +3,17 @@ import pytest
 import torch
 
 # from mmseg.models.backbones.dswin import SwinBlock, DSwinTransformer
-from mmseg.models.backbones.vmamba import Backbone_VSSM
+# from mmseg.models.backbones.vmamba import Backbone_VSSM
+# from mmseg.models.backbones.deformable_vmamba import DeformableVMAMBA
+from mmseg.models.backbones.deformable_vmamba_unfold import DeformableAggregateVMAMBA
 
 
 def test_swin_transformer():
     """Test Swin Transformer backbone."""
-
     # Test absolute position embedding
     temp = torch.randn((1, 3, 512, 512)).cuda()
-    model = Backbone_VSSM(        out_indices=(0, 1, 2, 3),
-        pretrained="weights/upernet_vssm_4xb4-160k_ade20k-512x512_base_iter_160000.pth",
+    model = DeformableAggregateVMAMBA(out_indices=(0, 1, 2, 3),
+        pretrained="/root/autodl-tmp/segsroad_model_weights/upernet_vssm_4xb4-160k_ade20k-512x512_base_iter_160000.pth",
         # copied from classification/configs/vssm/vssm_base_224.yaml
         dims=128,
         depths=(2, 2, 15, 2),

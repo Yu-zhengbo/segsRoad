@@ -11,7 +11,7 @@ def test_swin_transformer():
 
     # Test absolute position embedding
     temp = torch.randn((1, 3, 512, 512)).cuda()
-    model = DAMamba_tiny(pretrained='weights/DAMamba-T.pth').cuda()#, use_abs_pos_embed=True)
+    model = DAMamba_tiny(pretrained='/root/autodl-tmp/segsroad_model_weights/DAMamba-T.pth').cuda()#, use_abs_pos_embed=True)
     # model.init_weights()
     model(temp)
 

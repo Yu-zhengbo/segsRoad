@@ -71,8 +71,8 @@ class EncoderDecoder(BaseSegmentor):
     """  # noqa: E501
 
     def __init__(self,
-                 backbone: ConfigType,
-                 decode_head: ConfigType,
+                 backbone: ConfigType = None,
+                 decode_head: ConfigType = None,
                  neck: OptConfigType = None,
                  auxiliary_head: OptConfigType = None,
                  train_cfg: OptConfigType = None,
@@ -86,16 +86,18 @@ class EncoderDecoder(BaseSegmentor):
             assert backbone.get('pretrained') is None, \
                 'both backbone and segmentor set pretrained weight'
             backbone.pretrained = pretrained
-        self.backbone = MODELS.build(backbone)
+        if backbone is not None:
+            self.backbone = MODELS.build(backbone)
         if neck is not None:
             self.neck = MODELS.build(neck)
-        self._init_decode_head(decode_head)
+        if decode_head is not None:
+            self._init_decode_head(decode_head)
         self._init_auxiliary_head(auxiliary_head)
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
 
-        assert self.with_decode_head
+        # assert self.with_decode_head
 
     def _init_decode_head(self, decode_head: ConfigType) -> None:
         """Initialize ``decode_head``"""
