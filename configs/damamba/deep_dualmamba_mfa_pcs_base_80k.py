@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/datasets/deepglobe.py',
     '../_base_/default_runtime.py',
-    '../_base_/schedules/schedule_40k.py'
+    '../_base_/schedules/schedule_80k.py'
 ]
 # optimizer
 crop_size = (512, 512)
@@ -76,12 +76,12 @@ param_scheduler = [
         eta_min=0.0,
         power=1.0,
         begin=1500,
-        end=40000,
+        end=80000,
         by_epoch=False,
     )
 ]
 # train_cfg = dict(type='IterBasedTrainLoop', max_iters=40000, val_interval=100)
 # By default, models are trained on 8 GPUs with 2 images per GPU
-train_dataloader = dict(batch_size=6, num_workers=6)
+train_dataloader = dict(batch_size=8, num_workers=8)
 val_dataloader = dict(batch_size=1)
 test_dataloader = val_dataloader
