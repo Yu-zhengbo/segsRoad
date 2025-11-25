@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'RoadDataset'
-data_root = '/root/autodl-tmp/roaddataset/mass'
+data_root = '/home/cz/datasets/roaddataset/mass'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -17,7 +17,7 @@ train_pipeline = [
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(1500, 1500), keep_ratio=True),
+    dict(type='Resize', scale=(1024, 1024), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
     dict(type='LoadAnnotations', reduce_zero_label=False),
@@ -26,14 +26,16 @@ test_pipeline = [
 
 
 
-img_ratios = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
+# img_ratios = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
+img_ratios = [1024]
 tta_pipeline = [
     dict(type='LoadImageFromFile', backend_args=None),
     dict(
         type='TestTimeAug',
         transforms=[
             [
-                dict(type='Resize', scale_factor=r, keep_ratio=True)
+                # dict(type='Resize', scale_factor=r, keep_ratio=True)
+                dict(type='Resize', scale=(r, r), keep_ratio=True)
                 for r in img_ratios
             ],
             [

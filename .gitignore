@@ -137,4 +137,11 @@ analysis_dataset.py
 Arial.ttf
 Times New Roman.ttf
 
-topo_metric
+topo_metric/output/
+topo_metric/target/
+topo_metric/*.ipynb
+topo_metric/demo.py
+topo_metric/*.mod
+topo_metric/*.sum
+topo_metric/*.json
+topo_metric/*.svg
