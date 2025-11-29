@@ -26,6 +26,7 @@ from .mask_classification import MatchMasks, seg_data_to_instance_data
 from .transformer import SinePositionalEncoding, DetrTransformerEncoder
 from .transformer import DetrTransformerEncoderWithSkipConnection
 from .mamba import MambaDDPBlock, MambaDDPSequence
+from .conv_time import ConvDDPBlock,ConvDDPSequence
 __all__ = [
     'collect_env',
     'register_all_modules',
@@ -74,5 +75,6 @@ __all__ = [
     
     'DetrTransformerEncoder', 'SinePositionalEncoding',
     'DetrTransformerEncoderWithSkipConnection',
-    'MambaDDPBlock', 'MambaDDPSequence'
+    'MambaDDPBlock', 'MambaDDPSequence',
+    'ConvDDPBlock', 'ConvDDPSequence'
 ]

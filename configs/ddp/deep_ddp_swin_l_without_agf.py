@@ -4,9 +4,7 @@ _base_ = [
     '../_base_/schedules/schedule_80k.py'
 ]
 checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/' \
-                  'swin_base_patch4_window7_224_20220317-e9b98025.pth'  # noqa
-# checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_large_patch4_window7_224_22k_20220412-aeecf2aa.pth'  # noqa
-
+                  'swin_large_patch4_window12_384_22k_20220412-6580f57d.pth'  # noqa
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 backbone_norm_cfg = dict(type='LN', requires_grad=True)
@@ -21,19 +19,36 @@ data_preprocessor = dict(
     size=crop_size)
 model = dict(
     type='DDP',
-    data_preprocessor=data_preprocessor,
     timesteps=3,
     bit_scale=0.01,
     accumulation=True,
     pretrained=None,
     backbone=dict(
-        pretrained='/home/cz/datasets/segsroad_model_weights/DAMamba-B.pth',
-        type='DAMamba_base',
-    ),
+        type='SwinTransformer',
+        init_cfg=dict(type='Pretrained', checkpoint=checkpoint_file),
+        pretrain_img_size=512,
+        in_channels=3,
+        embed_dims=192,
+        patch_size=4,
+        window_size=12,
+        mlp_ratio=4,
+        depths=[2, 2, 18, 2],
+        num_heads=[6, 12, 24, 48],
+        strides=(4, 2, 2, 2),
+        out_indices=(0, 1, 2, 3),
+        qkv_bias=True,
+        qk_scale=None,
+        patch_norm=True,
+        drop_rate=0.,
+        attn_drop_rate=0.,
+        drop_path_rate=0.3,
+        use_abs_pos_embed=False,
+        act_cfg=dict(type='GELU'),
+        norm_cfg=backbone_norm_cfg),
     neck=[
         dict(
             type='FPN',
-            in_channels=[112, 224, 448, 640],
+            in_channels=[192, 384, 768, 1536],
             out_channels=256,
             act_cfg=None,
             norm_cfg=dict(type='GN', num_groups=32),
@@ -62,7 +77,7 @@ model = dict(
             use_sigmoid=False,
             loss_weight=0.4)),
     decode_head=dict(
-        type='DeformableHeadWithTimeConnect',
+        type='DeformableHeadWithTime',
         in_channels=[256],
         channels=256,
         in_index=[0],
@@ -71,26 +86,34 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         num_feature_levels=1,
-        encoder=dict(
-            type='DetrTransformerEncoder',
-            num_layers=6,
-            transformerlayers=dict(
-                type='BaseTransformerLayer',
-                use_time_mlp=True,
-                attn_cfgs=dict(
-                    type='MultiScaleDeformableAttention',
-                    embed_dims=256,
-                    num_levels=1,
-                    num_heads=8,
-                    dropout=0.),
-                ffn_cfgs=dict(
-                    type='FFN',
-                    embed_dims=256,
-                    feedforward_channels=1024,
-                    ffn_drop=0.,
-                    act_cfg=dict(type='GELU')),
-                operation_order=('self_attn', 'norm', 'ffn', 'norm'))
+        encoder = dict(
+            type='ConvDDPSequence',
+            in_chs = 256,
+            depth=6,
+            token_mixer='conv',
+            head_dim=16,
+            mlp_ratio=4
         ),
+        # encoder=dict(
+        #     type='DetrTransformerEncoder',
+        #     num_layers=6,
+        #     transformerlayers=dict(
+        #         type='BaseTransformerLayer',
+        #         use_time_mlp=True,
+        #         attn_cfgs=dict(
+        #             type='MultiScaleDeformableAttention',
+        #             embed_dims=256,
+        #             num_levels=1,
+        #             num_heads=8,
+        #             dropout=0.),
+        #         ffn_cfgs=dict(
+        #             type='FFN',
+        #             embed_dims=256,
+        #             feedforward_channels=1024,
+        #             ffn_drop=0.,
+        #             act_cfg=dict(type='GELU')),
+        #         operation_order=('self_attn', 'norm', 'ffn', 'norm'))
+        # ),
         positional_encoding=dict(
             type='SinePositionalEncoding',
             num_feats=128,
@@ -103,7 +126,6 @@ model = dict(
     # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
-
 optim_wrapper = dict(
     _delete_=True,
     type='OptimWrapper',
@@ -129,6 +151,6 @@ param_scheduler = [
         by_epoch=False,
     )
 ]
-train_dataloader = dict(batch_size=6, num_workers=6)
+train_dataloader = dict(batch_size=2, num_workers=1)
 val_dataloader = dict(batch_size=1, num_workers=1)
 test_dataloader = val_dataloader

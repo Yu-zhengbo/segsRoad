@@ -37,7 +37,10 @@ class DeformableHeadWithTime(BaseDecodeHead):
         super().__init__(input_transform='multiple_select', **kwargs)
     
         self.num_feature_levels = num_feature_levels
-        self.encoder = build_transformer_layer_sequence(encoder)
+        try:
+            self.encoder = build_transformer_layer_sequence(encoder)
+        except TypeError:
+            self.encoder = MODELS.build(encoder)
         self.positional_encoding = build_positional_encoding(
             positional_encoding)
         self.embed_dims = self.encoder.embed_dims
@@ -88,6 +91,37 @@ class DeformableHeadWithTime(BaseDecodeHead):
         reference_points = torch.cat(reference_points_list, 1)
         reference_points = reference_points[:, :, None]
         return reference_points
+    
+    
+    # def forward(self, inputs, times):
+        
+    #     mlvl_feats = inputs[-self.num_feature_levels:]
+        
+    #     feat_flatten = []
+    #     lvl_pos_embed_flatten = []
+    #     spatial_shapes = []
+    #     for lvl, feat in enumerate(mlvl_feats):
+    #         bs, c, h, w = feat.shape
+    #         spatial_shape = (h, w)
+    #         spatial_shapes.append(spatial_shape)
+    #         mask = torch.zeros((bs, h, w), device=feat.device, requires_grad=False)
+    #         pos_embed = self.positional_encoding(mask)   #得到位置编码 B,256,128,128
+    #         lvl_pos_embed = pos_embed
+    #         lvl_pos_embed_flatten.append(lvl_pos_embed)
+    #         feat_flatten.append(feat)
+    #     feat_flatten = torch.cat(feat_flatten, 1)
+    #     lvl_pos_embed_flatten = torch.cat(lvl_pos_embed_flatten, 1)
+       
+    #     memory = self.encoder(
+    #         query=feat_flatten,
+    #         time=times,
+    #         query_pos=lvl_pos_embed_flatten,)
+
+    #     out = self.conv_seg(memory)
+
+
+    #     return out
+    
     
     # @auto_fp16()
     def forward(self, inputs, times):

@@ -40,7 +40,7 @@ def main():
         args.checkpoint,
         dataset_name=args.dataset_name,
         device=args.device)
-
+    os.makedirs(args.out_dir, exist_ok=True)
     # test a single image
     if os.path.isfile(args.img):
         mmseg_inferencer(
