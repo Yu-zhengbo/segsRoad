@@ -9,7 +9,7 @@ for file in ./target/chn6/*.p; do
 done
 
 # source directory
-dir=output/chn6/diffroad
+dir=output/chn6/mask2former
 
 # source directory
 # dir=$1

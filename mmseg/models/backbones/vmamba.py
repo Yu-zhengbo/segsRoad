@@ -20,7 +20,7 @@ DropPath.__repr__ = lambda self: f"timm.DropPath({self.drop_prob})"
 # torch.backends.cudnn.deterministic = True
 
 # try:
-#     from .csm_triton import 
+#     from .csm_triton import
 # except:
 #     from csm_triton import cross_scan_fn, cross_merge_fn
 
@@ -192,7 +192,7 @@ class mamba_init:
             dt_proj.bias.copy_(inv_dt)
         # Our initialization would set all Linear.bias to zero, need to mark this one as _no_reinit
         # dt_proj.bias._no_reinit = True
-        
+
         return dt_proj
 
     @staticmethod
@@ -230,10 +230,10 @@ class mamba_init:
         dt_projs_weight = nn.Parameter(torch.stack([t.weight for t in dt_projs], dim=0)) # (K, inner, rank)
         dt_projs_bias = nn.Parameter(torch.stack([t.bias for t in dt_projs], dim=0)) # (K, inner)
         del dt_projs
-            
+
         # A, D =======================================
         A_logs = cls.A_log_init(d_state, d_inner, copies=k_group, merge=True) # (K * D, N)
-        Ds = cls.D_init(d_inner, copies=k_group, merge=True) # (K * D)  
+        Ds = cls.D_init(d_inner, copies=k_group, merge=True) # (K * D)
         return A_logs, Ds, dt_projs_weight, dt_projs_bias
 
 
@@ -270,7 +270,7 @@ class SS2Dv0:
         d_inner = int(ssm_ratio * d_model)
         dt_rank = math.ceil(d_model / 16) if dt_rank == "auto" else dt_rank
 
-        self.forward = self.forwardv0 
+        self.forward = self.forwardv0
         if seq:
             self.forward = partial(self.forwardv0, seq=True)
         if not force_fp32:
@@ -315,7 +315,7 @@ class SS2Dv0:
         x = self.conv2d(x) # (b, d, h, w)
         x = self.act(x)
         selective_scan = partial(selective_scan_fn, backend="mamba")
-        
+
         B, D, H, W = x.shape
         D, N = self.A_logs.shape
         K, D, R = self.dt_projs_weight.shape
@@ -334,7 +334,7 @@ class SS2Dv0:
         dts = dts.contiguous().view(B, -1, L) # (b, k * d, l)
         Bs = Bs.contiguous() # (b, k, d_state, l)
         Cs = Cs.contiguous() # (b, k, d_state, l)
-        
+
         As = -self.A_logs.float().exp() # (k * d, d_state)
         Ds = self.Ds.float() # (k * d)
         dt_projs_bias = self.dt_projs_bias.float().view(-1) # (k * d)
@@ -342,7 +342,7 @@ class SS2Dv0:
         # assert len(xs.shape) == 3 and len(dts.shape) == 3 and len(Bs.shape) == 4 and len(Cs.shape) == 4
         # assert len(As.shape) == 2 and len(Ds.shape) == 1 and len(dt_projs_bias.shape) == 1
         to_fp32 = lambda *args: (_a.to(torch.float32) for _a in args)
-        
+
         if force_fp32:
             xs, dts, Bs, Cs = to_fp32(xs, dts, Bs, Cs)
 
@@ -350,7 +350,7 @@ class SS2Dv0:
             out_y = []
             for i in range(4):
                 yi = selective_scan(
-                    xs.view(B, K, -1, L)[:, i], dts.view(B, K, -1, L)[:, i], 
+                    xs.view(B, K, -1, L)[:, i], dts.view(B, K, -1, L)[:, i],
                     As.view(K, -1, N)[i], Bs[:, i].unsqueeze(1), Cs[:, i].unsqueeze(1), Ds.view(K, -1)[i],
                     delta_bias=dt_projs_bias.view(K, -1)[i],
                     delta_softplus=True,
@@ -359,7 +359,7 @@ class SS2Dv0:
             out_y = torch.stack(out_y, dim=1)
         else:
             out_y = selective_scan(
-                xs, dts, 
+                xs, dts,
                 As, Bs, Cs, Ds,
                 delta_bias=dt_projs_bias,
                 delta_softplus=True,
@@ -370,7 +370,7 @@ class SS2Dv0:
         wh_y = torch.transpose(out_y[:, 1].view(B, -1, W, H), dim0=2, dim1=3).contiguous().view(B, -1, L)
         invwh_y = torch.transpose(inv_y[:, 1].view(B, -1, W, H), dim0=2, dim1=3).contiguous().view(B, -1, L)
         y = out_y[:, 0] + inv_y[:, 0] + wh_y + invwh_y
-        
+
         y = y.transpose(dim0=1, dim1=2).contiguous() # (B, L, C)
         y = self.out_norm(y).view(B, H, W, -1)
 
@@ -379,7 +379,7 @@ class SS2Dv0:
         return out
 
 
-# support: v01-v05; v051d,v052d,v052dc; 
+# support: v01-v05; v051d,v052d,v052dc;
 # postfix: _onsigmoid,_onsoftmax,_ondwconv3,_onnone;_nozact,_noz;_oact;_no32;
 # history support: v2,v3;v31d,v32d,v32dc;
 class SS2Dv2:
@@ -392,7 +392,7 @@ class SS2Dv2:
         dt_rank="auto",
         act_layer=nn.SiLU,
         # dwconv ===============
-        d_conv=3, # < 2 means no conv 
+        d_conv=3, # < 2 means no conv
         conv_bias=True,
         # ======================
         dropout=0.0,
@@ -408,7 +408,7 @@ class SS2Dv2:
         forward_type="v2",
         channel_first=False,
         # ======================
-        **kwargs,    
+        **kwargs,
     ):
         factory_kwargs = {"device": None, "dtype": None}
         super().__init__()
@@ -452,7 +452,7 @@ class SS2Dv2:
         d_proj = self.d_inner if self.disable_z else (self.d_inner * 2)
         self.in_proj = Linear(self.d_model, d_proj, bias=bias)
         self.act: nn.Module = act_layer()
-        
+
         # conv =======================================
         if self.with_dconv:
             self.conv2d = nn.Conv2d(
@@ -472,7 +472,7 @@ class SS2Dv2:
         ]
         self.x_proj_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj], dim=0)) # (K, N, inner)
         del self.x_proj
-        
+
         # out proj =======================================
         self.out_act = nn.GELU() if self.oact else nn.Identity()
         self.out_proj = Linear(self.d_inner, self.d_model, bias=bias)
@@ -497,7 +497,7 @@ class SS2Dv2:
 
     def forward_corev2(
         self,
-        x: torch.Tensor=None, 
+        x: torch.Tensor=None,
         # ==============================
         force_fp32=False, # True: input fp32
         # ==============================
@@ -526,14 +526,14 @@ class SS2Dv2:
 
         def selective_scan(u, delta, A, B, C, D=None, delta_bias=None, delta_softplus=True):
             return selective_scan_fn(u, delta, A, B, C, D, delta_bias, delta_softplus, ssoflex, backend=selective_scan_backend)
-        
+
         if _scan_mode == -1:
             x_proj_bias = getattr(self, "x_proj_bias", None)
             def scan_rowcol(
-                x: torch.Tensor, 
-                proj_weight: torch.Tensor, 
-                proj_bias: torch.Tensor, 
-                dt_weight: torch.Tensor, 
+                x: torch.Tensor,
+                proj_weight: torch.Tensor,
+                proj_bias: torch.Tensor,
+                dt_weight: torch.Tensor,
                 dt_bias: torch.Tensor, # (2*c)
                 _As: torch.Tensor, # As = -torch.exp(A_logs.to(torch.float))[:2,] # (2*c, d_state)
                 _Ds: torch.Tensor,
@@ -578,12 +578,12 @@ class SS2Dv2:
                     xs, dts, As, Bs, Cs, Ds, delta_bias, delta_softplus
                 ).view(_B, 2, -1, _L)
                 return ys
-            
+
             As = -self.A_logs.to(torch.float).exp().view(4, -1, N)
             x = F.layer_norm(x.permute(0, 2, 3, 1), normalized_shape=(int(x.shape[1]),)).permute(0, 3, 1, 2).contiguous() # added0510 to avoid nan
             y_row = scan_rowcol(
                 x,
-                proj_weight = self.x_proj_weight.view(4, -1, D)[:2].contiguous(), 
+                proj_weight = self.x_proj_weight.view(4, -1, D)[:2].contiguous(),
                 proj_bias = (x_proj_bias.view(4, -1)[:2].contiguous() if x_proj_bias is not None else None),
                 dt_weight = self.dt_projs_weight.view(4, D, -1)[:2].contiguous(),
                 dt_bias = (self.dt_projs_bias.view(4, -1)[:2].contiguous() if self.dt_projs_bias is not None else None),
@@ -594,7 +594,7 @@ class SS2Dv2:
             y_row = F.layer_norm(y_row.permute(0, 2, 3, 1), normalized_shape=(int(y_row.shape[1]),)).permute(0, 3, 1, 2).contiguous() # added0510 to avoid nan
             y_col = scan_rowcol(
                 y_row,
-                proj_weight = self.x_proj_weight.view(4, -1, D)[2:].contiguous().to(y_row.dtype), 
+                proj_weight = self.x_proj_weight.view(4, -1, D)[2:].contiguous().to(y_row.dtype),
                 proj_bias = (x_proj_bias.view(4, -1)[2:].contiguous().to(y_row.dtype) if x_proj_bias is not None else None),
                 dt_weight = self.dt_projs_weight.view(4, D, -1)[2:].contiguous().to(y_row.dtype),
                 dt_bias = (self.dt_projs_bias.view(4, -1)[2:].contiguous().to(y_row.dtype) if self.dt_projs_bias is not None else None),
@@ -633,7 +633,7 @@ class SS2Dv2:
             ys: torch.Tensor = selective_scan(
                 xs, dts, As, Bs, Cs, Ds, delta_bias, delta_softplus
             ).view(B, K, -1, H, W)
-            
+
             y: torch.Tensor = cross_merge_fn(ys, in_channel_first=True, out_channel_first=True, scans=_scan_mode, force_torch=scan_force_torch)
 
             if getattr(self, "__DEBUG__", False):
@@ -720,7 +720,7 @@ class SS2Dv2:
         return ret, value
 
 
-# support: xv1a,xv2a,xv3a; 
+# support: xv1a,xv2a,xv3a;
 # postfix: _cpos;_ocov;_ocov2;_ca,_ca1;_act;_mul;_onsigmoid,_onsoftmax,_ondwconv3,_onnone;
 class SS2Dv3:
     def __initxv__(
@@ -731,7 +731,7 @@ class SS2Dv3:
         ssm_ratio=2.0,
         dt_rank="auto",
         # dwconv ===============
-        d_conv=3, # < 2 means no conv 
+        d_conv=3, # < 2 means no conv
         conv_bias=True,
         # ======================
         dropout=0.0,
@@ -776,7 +776,7 @@ class SS2Dv3:
         self.dts_dim = dict(xv1a=self.dt_rank, xv2a=self.d_inner, xv3a=4 * self.dt_rank)[mode]
         d_inner_all = d_inner + self.dts_dim + 8 * d_state
         self.in_proj = Linear(d_model, d_inner_all, bias=bias)
-        
+
         # conv =======================================
         self.cpos = False
         self.iconv = False
@@ -787,7 +787,7 @@ class SS2Dv3:
             cact1, forward_type = checkpostfix("_ca1", forward_type)
             self.cact = nn.SiLU() if cact else nn.Identity()
             self.cact = nn.GELU() if cact1 else self.cact
-                
+
             self.oconv2, forward_type = checkpostfix("_ocov2", forward_type)
             self.oconv, forward_type = checkpostfix("_ocov", forward_type)
             self.cpos, forward_type = checkpostfix("_cpos", forward_type)
@@ -834,7 +834,7 @@ class SS2Dv3:
             self.Ds = nn.Parameter(torch.ones((k_group * d_inner)))
             self.A_logs = nn.Parameter(torch.randn((k_group * d_inner, d_state))) # A == -A_logs.exp() < 0; # 0 < exp(A * dt) < 1
             self.dt_projs_weight = nn.Parameter(torch.randn((k_group, d_inner, dt_rank)))
-            self.dt_projs_bias = nn.Parameter(torch.randn((k_group, d_inner))) 
+            self.dt_projs_bias = nn.Parameter(torch.randn((k_group, d_inner)))
         elif initialize in ["v2"]:
             # simple init dt_projs, A_logs, Ds
             self.Ds = nn.Parameter(torch.ones((k_group * d_inner)))
@@ -866,7 +866,7 @@ class SS2Dv3:
             x = x + self.conv2d(x) # (b, d, h, w)
 
         x = self.in_proj(x)
-        
+
         if self.oconv2:
             x = self.conv2d(x) # (b, d, h, w)
 
@@ -897,7 +897,7 @@ class SS2Dv3:
         y: torch.Tensor = cross_merge_fn(ys.contiguous(), in_channel_first=self.channel_first, out_channel_first=True)
         y = y.view(B, -1, H, W) if self.channel_first else y.view(B, H, W, -1)
         y = out_norm(y)
-        
+
         if getattr(self, "__DEBUG__", False):
             setattr(self, "__data__", dict(
                 A_logs=self.A_logs, Bs=Bs, Cs=Cs, Ds=Ds,
@@ -906,9 +906,9 @@ class SS2Dv3:
             ))
 
         y = (y.to(x.dtype) if to_dtype else y)
-        
+
         y = self.out_act(y)
-        
+
         if self.omul:
             y = y * _us
 
@@ -930,7 +930,7 @@ class SS2Dm0:
         dt_rank="auto",
         act_layer=nn.GELU,
         # dwconv ===============
-        d_conv=3, # < 2 means no conv 
+        d_conv=3, # < 2 means no conv
         conv_bias=True,
         # ======================
         dropout=0.0,
@@ -947,7 +947,7 @@ class SS2Dm0:
         # ======================
         with_initial_state=False,
         # ======================
-        **kwargs,    
+        **kwargs,
     ):
         factory_kwargs = {"device": None, "dtype": None}
         super().__init__()
@@ -977,7 +977,7 @@ class SS2Dm0:
         d_proj = d_inner if self.disable_z else (d_inner * 2)
         self.in_proj = Linear(d_model, d_proj, bias=bias)
         self.act: nn.Module = act_layer()
-        
+
         # conv =======================================
         if self.with_dconv:
             self.conv2d = nn.Sequential(
@@ -992,8 +992,8 @@ class SS2Dm0:
                     **factory_kwargs,
                 ),
                 Permute(0, 2, 3, 1),
-            ) 
-        
+            )
+
         # x proj ============================
         self.x_proj = [
             nn.Linear(d_inner, (dt_rank + d_state * 2), bias=False)
@@ -1001,7 +1001,7 @@ class SS2Dm0:
         ]
         self.x_proj_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj], dim=0)) # (K, N, inner)
         del self.x_proj
-        
+
         # out proj =======================================
         self.out_act = nn.GELU() if self.oact else nn.Identity()
         self.out_proj = Linear(d_inner, d_model, bias=bias)
@@ -1025,11 +1025,11 @@ class SS2Dm0:
 
     def forward_corem0(
         self,
-        x: torch.Tensor=None, 
+        x: torch.Tensor=None,
         # ==============================
         force_fp32=False, # True: input fp32
         chunk_size = 64,
-        dstate = 64,        
+        dstate = 64,
         # ==============================
         selective_scan_backend = None,
         scan_mode = "cross2d",
@@ -1075,7 +1075,7 @@ class SS2Dm0:
             xs, dts, Bs, Cs = to_fp32(xs, dts, Bs, Cs)
 
         ys, final_state = selective_scan_chunk_fn(
-            xs, dts, As, Bs, Cs, chunk_size=chunk_size, D=Ds, dt_bias=dt_bias, 
+            xs, dts, As, Bs, Cs, chunk_size=chunk_size, D=Ds, dt_bias=dt_bias,
             initial_states=initial_state, dt_softplus=True, return_final_states=True,
             backend=selective_scan_backend,
         )
@@ -1084,7 +1084,7 @@ class SS2Dm0:
         if getattr(self, "__DEBUG__", False):
             setattr(self, "__data__", dict(
                 A_logs=self.A_logs, Bs=Bs, Cs=Cs, Ds=self.Ds,
-                us=xs, dts=dts, delta_bias=self.dt_projs_bias, 
+                us=xs, dts=dts, delta_bias=self.dt_projs_bias,
                 initial_state=self.initial_state, final_satte=final_state,
                 ys=ys, y=y, H=H, W=W,
             ))
@@ -1122,7 +1122,7 @@ class SS2D(nn.Module, SS2Dv0, SS2Dv2, SS2Dv3, SS2Dm0):
         dt_rank="auto",
         act_layer=nn.SiLU,
         # dwconv ===============
-        d_conv=3, # < 2 means no conv 
+        d_conv=3, # < 2 means no conv
         conv_bias=True,
         # ======================
         dropout=0.0,
@@ -1196,8 +1196,8 @@ class VSSBlock(nn.Module):
         if self.ssm_branch:
             self.norm = norm_layer(hidden_dim)
             self.op = _SS2D(
-                d_model=hidden_dim, 
-                d_state=ssm_d_state, 
+                d_model=hidden_dim,
+                d_state=ssm_d_state,
                 ssm_ratio=ssm_ratio,
                 dt_rank=ssm_dt_rank,
                 act_layer=ssm_act_layer,
@@ -1218,9 +1218,9 @@ class VSSBlock(nn.Module):
                 forward_type=forward_type,
                 channel_first=channel_first,
             )
-        
+
         self.drop_path = DropPath(drop_path)
-        
+
         if self.mlp_branch:
             _MLP = Mlp if not gmlp else gMlp
             self.norm2 = norm_layer(hidden_dim)
@@ -1250,20 +1250,20 @@ class VSSBlock(nn.Module):
 
 class VSSM(nn.Module):
     def __init__(
-        self, 
-        patch_size=4, 
-        in_chans=3, 
-        num_classes=1000, 
-        depths=[2, 2, 9, 2], 
-        dims=[96, 192, 384, 768], 
+        self,
+        patch_size=4,
+        in_chans=3,
+        num_classes=1000,
+        depths=[2, 2, 9, 2],
+        dims=[96, 192, 384, 768],
         # =========================
         ssm_d_state=16,
         ssm_ratio=2.0,
         ssm_dt_rank="auto",
-        ssm_act_layer="silu",        
+        ssm_act_layer="silu",
         ssm_conv=3,
         ssm_conv_bias=True,
-        ssm_drop_rate=0.0, 
+        ssm_drop_rate=0.0,
         ssm_init="v0",
         forward_type="v2",
         # =========================
@@ -1272,12 +1272,12 @@ class VSSM(nn.Module):
         mlp_drop_rate=0.0,
         gmlp=False,
         # =========================
-        drop_path_rate=0.1, 
-        patch_norm=True, 
+        drop_path_rate=0.1,
+        patch_norm=True,
         norm_layer="LN", # "BN", "LN2D"
         downsample_version: str = "v2", # "v1", "v2", "v3"
         patchembed_version: str = "v1", # "v1", "v2"
-        use_checkpoint=False,  
+        use_checkpoint=False,
         # =========================
         posembed=False,
         imgsize=224,
@@ -1294,7 +1294,7 @@ class VSSM(nn.Module):
         self.num_features = dims[-1]
         self.dims = dims
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
-        
+
         _NORMLAYERS = dict(
             ln=nn.LayerNorm,
             ln2d=LayerNorm2d,
@@ -1302,9 +1302,9 @@ class VSSM(nn.Module):
         )
 
         _ACTLAYERS = dict(
-            silu=nn.SiLU, 
-            gelu=nn.GELU, 
-            relu=nn.ReLU, 
+            silu=nn.SiLU,
+            gelu=nn.GELU,
+            relu=nn.ReLU,
             sigmoid=nn.Sigmoid,
         )
 
@@ -1315,23 +1315,23 @@ class VSSM(nn.Module):
         self.pos_embed = self._pos_embed(dims[0], patch_size, imgsize) if posembed else None
 
         _make_patch_embed = dict(
-            v1=self._make_patch_embed, 
+            v1=self._make_patch_embed,
             v2=self._make_patch_embed_v2,
         ).get(patchembed_version, None)
         self.patch_embed = _make_patch_embed(in_chans, dims[0], patch_size, patch_norm, norm_layer, channel_first=self.channel_first)
 
         _make_downsample = dict(
-            v1=PatchMerging2D, 
-            v2=self._make_downsample, 
-            v3=self._make_downsample_v3, 
+            v1=PatchMerging2D,
+            v2=self._make_downsample,
+            v3=self._make_downsample_v3,
             none=(lambda *_, **_k: None),
         ).get(downsample_version, None)
 
         self.layers = nn.ModuleList()
         for i_layer in range(self.num_layers):
             downsample = _make_downsample(
-                self.dims[i_layer], 
-                self.dims[i_layer + 1], 
+                self.dims[i_layer],
+                self.dims[i_layer + 1],
                 norm_layer=norm_layer,
                 channel_first=self.channel_first,
             ) if (i_layer < self.num_layers - 1) else nn.Identity()
@@ -1423,7 +1423,7 @@ class VSSM(nn.Module):
             (nn.Identity() if channel_first else Permute(0, 2, 3, 1)),
             (norm_layer(embed_dim) if patch_norm else nn.Identity()),
         )
-    
+
     @staticmethod
     def _make_downsample(dim=96, out_dim=192, norm_layer=nn.LayerNorm, channel_first=False):
         # if channel first, then Norm and Output are both channel_first
@@ -1446,20 +1446,20 @@ class VSSM(nn.Module):
 
     @staticmethod
     def _make_layer(
-        dim=96, 
-        drop_path=[0.1, 0.1], 
-        use_checkpoint=False, 
+        dim=96,
+        drop_path=[0.1, 0.1],
+        use_checkpoint=False,
         norm_layer=nn.LayerNorm,
         downsample=nn.Identity(),
         channel_first=False,
         # ===========================
         ssm_d_state=16,
         ssm_ratio=2.0,
-        ssm_dt_rank="auto",       
+        ssm_dt_rank="auto",
         ssm_act_layer=nn.SiLU,
         ssm_conv=3,
         ssm_conv_bias=True,
-        ssm_drop_rate=0.0, 
+        ssm_drop_rate=0.0,
         ssm_init="v0",
         forward_type="v2",
         # ===========================
@@ -1476,7 +1476,7 @@ class VSSM(nn.Module):
         blocks = []
         for d in range(depth):
             blocks.append(VSSBlock(
-                hidden_dim=dim, 
+                hidden_dim=dim,
                 drop_path=drop_path[d],
                 norm_layer=norm_layer,
                 channel_first=channel_first,
@@ -1496,7 +1496,7 @@ class VSSM(nn.Module):
                 use_checkpoint=use_checkpoint,
                 _SS2D=_SS2D,
             ))
-        
+
         return nn.Sequential(OrderedDict(
             blocks=nn.Sequential(*blocks,),
             downsample=downsample,
@@ -1590,8 +1590,8 @@ class Backbone_VSSM(VSSM):
             ln2d=LayerNorm2d,
             bn=nn.BatchNorm2d,
         )
-        norm_layer: nn.Module = _NORMLAYERS.get(norm_layer.lower(), None)        
-        
+        norm_layer: nn.Module = _NORMLAYERS.get(norm_layer.lower(), None)
+
         self.out_indices = out_indices
         for i in out_indices:
             layer = norm_layer(self.dims[i])
@@ -1602,7 +1602,7 @@ class Backbone_VSSM(VSSM):
         self.load_pretrained(pretrained)
     # def init_weights(self, pretrained=None):
     #     self.load_pretrained(pretrained)
-        
+
     def load_pretrained(self, ckpt=None, key="state_dict"):
         if ckpt is None:
             return
@@ -1616,7 +1616,7 @@ class Backbone_VSSM(VSSM):
                 k = '.'.join(k.split('.')[1:])
                 new_state_dict[k] = v
             incompatibleKeys = self.load_state_dict(new_state_dict, strict=False)
-            print(incompatibleKeys)        
+            print(incompatibleKeys)
         except Exception as e:
             print(f"Failed loading checkpoint form {ckpt}: {e}")
 
@@ -1639,136 +1639,136 @@ class Backbone_VSSM(VSSM):
 
         if len(self.out_indices) == 0:
             return x
-        
+
         return outs
 
 
 # =====================================================
 def vanilla_vmamba_tiny():
     return VSSM(
-        depths=[2, 2, 9, 2], dims=96, drop_path_rate=0.2, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 9, 2], dims=96, drop_path_rate=0.2,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=16, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v0", 
+        ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v0",
         mlp_ratio=0.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer="ln", 
-        downsample_version="v1", patchembed_version="v1", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer="ln",
+        downsample_version="v1", patchembed_version="v1",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vanilla_vmamba_small():
     return VSSM(
-        depths=[2, 2, 27, 2], dims=96, drop_path_rate=0.3, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 27, 2], dims=96, drop_path_rate=0.3,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=16, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v0", 
+        ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v0",
         mlp_ratio=0.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer="ln", 
-        downsample_version="v1", patchembed_version="v1", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer="ln",
+        downsample_version="v1", patchembed_version="v1",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vanilla_vmamba_base():
     return VSSM(
-        depths=[2, 2, 27, 2], dims=128, drop_path_rate=0.6, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 27, 2], dims=128, drop_path_rate=0.6,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=16, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v0", 
+        ssm_conv=3, ssm_conv_bias=True, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v0",
         mlp_ratio=0.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer="ln", 
-        downsample_version="v1", patchembed_version="v1", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer="ln",
+        downsample_version="v1", patchembed_version="v1",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 # =====================================================
 def vmamba_tiny_s2l5(channel_first=True):
     return VSSM(
-        depths=[2, 2, 5, 2], dims=96, drop_path_rate=0.2, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 5, 2], dims=96, drop_path_rate=0.2,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=1, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v05_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v05_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"), 
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"),
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vmamba_small_s2l15(channel_first=True):
     return VSSM(
-        depths=[2, 2, 15, 2], dims=96, drop_path_rate=0.3, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 15, 2], dims=96, drop_path_rate=0.3,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=1, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v05_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v05_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"), 
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"),
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vmamba_base_s2l15(channel_first=True):
     return VSSM(
-        depths=[2, 2, 15, 2], dims=128, drop_path_rate=0.6, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 15, 2], dims=128, drop_path_rate=0.6,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=1, ssm_ratio=2.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v05_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v05_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"), 
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"),
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 # =====================================================
 def vmamba_tiny_s1l8(channel_first=True):
     return VSSM(
-        depths=[2, 2, 8, 2], dims=96, drop_path_rate=0.2, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 8, 2], dims=96, drop_path_rate=0.2,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=1, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v05_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v05_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"), 
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"),
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vmamba_small_s1l20(channel_first=True):
     return VSSM(
-        depths=[2, 2, 20, 2], dims=96, drop_path_rate=0.3, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 20, 2], dims=96, drop_path_rate=0.3,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=1, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v05_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v05_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"), 
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"),
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vmamba_base_s1l20(channel_first=True):
     return VSSM(
-        depths=[2, 2, 20, 2], dims=128, drop_path_rate=0.5, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 20, 2], dims=128, drop_path_rate=0.5,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=1, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="silu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v0", forward_type="v05_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v0", forward_type="v05_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
-        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"), 
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        patch_norm=True, norm_layer=("ln2d" if channel_first else "ln"),
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
@@ -1776,43 +1776,43 @@ def vmamba_base_s1l20(channel_first=True):
 # FLOPS count do not work now for mamba2!
 def vmamba_tiny_m2():
     return VSSM(
-        depths=[2, 2, 4, 2], dims=96, drop_path_rate=0.2, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 4, 2], dims=96, drop_path_rate=0.2,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=64, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="gelu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v2", forward_type="m0_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v2", forward_type="m0_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
         patch_norm=True, norm_layer="ln",
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vmamba_small_m2():
     return VSSM(
-        depths=[2, 2, 12, 2], dims=96, drop_path_rate=0.3, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 12, 2], dims=96, drop_path_rate=0.3,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=64, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="gelu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v2", forward_type="m0_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v2", forward_type="m0_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
         patch_norm=True, norm_layer="ln",
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
 def vmamba_base_m2():
     return VSSM(
-        depths=[2, 2, 12, 2], dims=128, drop_path_rate=0.3, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 12, 2], dims=128, drop_path_rate=0.3,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=64, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="gelu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v2", forward_type="m0_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v2", forward_type="m0_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
         patch_norm=True, norm_layer="ln",
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
 
 
@@ -1820,15 +1820,15 @@ if __name__ == "__main__":
     model_ref = vmamba_tiny_s1l8()
 
     model = VSSM(
-        depths=[2, 2, 4, 2], dims=96, drop_path_rate=0.2, 
-        patch_size=4, in_chans=3, num_classes=1000, 
+        depths=[2, 2, 4, 2], dims=96, drop_path_rate=0.2,
+        patch_size=4, in_chans=3, num_classes=1000,
         ssm_d_state=64, ssm_ratio=1.0, ssm_dt_rank="auto", ssm_act_layer="gelu",
-        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0, 
-        ssm_init="v2", forward_type="m0_noz", 
+        ssm_conv=3, ssm_conv_bias=False, ssm_drop_rate=0.0,
+        ssm_init="v2", forward_type="m0_noz",
         mlp_ratio=4.0, mlp_act_layer="gelu", mlp_drop_rate=0.0, gmlp=False,
         patch_norm=True, norm_layer="ln",
-        downsample_version="v3", patchembed_version="v2", 
-        use_checkpoint=False, posembed=False, imgsize=224, 
+        downsample_version="v3", patchembed_version="v2",
+        use_checkpoint=False, posembed=False, imgsize=224,
     )
     print(parameter_count(model)[""])
     print(model.flops()) # wrong
@@ -1857,7 +1857,7 @@ if __name__ == "__main__":
         tim2 = time.time() - tim
 
         return tim1 / 30, tim2 / 30
-    
+
     print(bench(model_ref))
     print(bench(model))
 
