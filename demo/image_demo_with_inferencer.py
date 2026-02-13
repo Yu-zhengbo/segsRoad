@@ -25,7 +25,7 @@ def main():
     parser.add_argument(
         '--opacity',
         type=float,
-        default=0.5,
+        default=1,
         help='Opacity of painted segmentation map. In (0, 1] range.')
     parser.add_argument(
         '--with-labels',
@@ -40,7 +40,7 @@ def main():
         args.checkpoint,
         dataset_name=args.dataset_name,
         device=args.device)
-
+    os.makedirs(args.out_dir, exist_ok=True)
     # test a single image
     if os.path.isfile(args.img):
         mmseg_inferencer(

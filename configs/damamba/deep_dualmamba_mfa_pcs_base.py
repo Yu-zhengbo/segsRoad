@@ -20,9 +20,9 @@ model = dict(
     data_preprocessor=data_preprocessor,
     pretrained=None,
     backbone=dict(
-        pretrained=None,
+        # pretrained=None,
         # pretrained='/root/autodl-tmp/segsroad_model_weights/DAMamba-B.pth',
-        # pretrained='/root/autodl-tmp/segsroad_model_weights/spiral_mamba_public.pth',
+        pretrained='/home/cz/datasets/segsroad_model_weights/spiral_mamba_public.pth',
         type='DualMamba_base',
         input_size=512,
     ),

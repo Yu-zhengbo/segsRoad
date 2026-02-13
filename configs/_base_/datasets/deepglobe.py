@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'RoadDataset'
-data_root = '/root/autodl-tmp/roaddataset/deepglobe'
+data_root = '/home/cz/datasets/roaddataset/deepglobe'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),

@@ -20,7 +20,7 @@ model = dict(
     data_preprocessor=data_preprocessor,
     pretrained=None,
     backbone=dict(
-        pretrained='weights/DAMamba-B.pth',
+        pretrained='/home/cz/datasets/segsroad_model_weights/DAMamba-B.pth',
         type='DAMamba_base',
     ),
     decode_head=dict(

@@ -398,7 +398,7 @@ class DASSM(nn.Module):
             self.A_logs_fre = self.A_log_init(self.d_state, self.d_inner*2, dt_init)
             self.Ds_fre = self.D_init(self.d_inner*2, dt_init)
             self.spiral_scan = SpiralScan(input_size,input_size)
-            self.fre_scale = nn.Parameter(torch.ones(1,self.d_inner,1,1))
+            # self.fre_scale = nn.Parameter(torch.ones(1,self.d_inner,1,1))
             # self.fre_norm = nn.GroupNorm(num_groups=16, num_channels = d_model * 2)
             self.fre_norm = nn.LayerNorm(self.d_inner*2)
             self.fusion_gate_conv = nn.Conv2d(self.d_inner, self.d_inner, 1)
@@ -838,7 +838,8 @@ class DAMamba(nn.Module):
         if isinstance(pretrained, str):
             # logger = get_root_logger()
             logger = logging.getLogger()
-            state_dict = torch.load(pretrained, map_location='cpu')['model']
+            state_dict = torch.load(pretrained, map_location='cpu')['state_dict']
+            state_dict = {k.replace('backbone.', ''): v for k, v in state_dict.items()}
             missing_keys, unexpected_keys = self.load_state_dict(state_dict, strict=False)
             print(f"Missing keys: {missing_keys}")
             print(f"Unexpected keys: {unexpected_keys}")

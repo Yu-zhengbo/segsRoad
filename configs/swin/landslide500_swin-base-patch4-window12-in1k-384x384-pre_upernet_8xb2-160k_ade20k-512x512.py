@@ -3,7 +3,15 @@ _base_ = [
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 crop_size = (512, 512)
-data_preprocessor = dict(size=crop_size)
+# data_preprocessor = dict(size=crop_size)
+data_preprocessor = dict(
+    size=crop_size,
+    type='SegDataPreProcessor',
+    mean=[123.675, 116.28, 103.53],
+    std=[58.395, 57.12, 57.375],
+    bgr_to_rgb=True,
+    pad_val=0,
+    seg_pad_val=0)
 checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_tiny_patch4_window7_224_20220317-1cdeb081.pth'  # noqa
 model = dict(
     data_preprocessor=data_preprocessor,
@@ -17,8 +25,8 @@ model = dict(
         use_abs_pos_embed=False,
         drop_path_rate=0.3,
         patch_norm=True),
-    decode_head=dict(in_channels=[128, 256, 512, 1024], num_classes=2),
-    auxiliary_head=dict(in_channels=512, num_classes=2))
+    decode_head=dict(in_channels=[128, 256, 512, 1024], num_classes=2,loss_decode=dict(class_weight=[1,10])),
+    auxiliary_head=dict(in_channels=512, num_classes=2,loss_decode=dict(class_weight=[1,10])))
 
 # AdamW optimizer, no weight decay for position embedding & layer norm
 # in backbone
@@ -36,7 +44,7 @@ optim_wrapper = dict(
 
 param_scheduler = [
     dict(
-        type='LinearLR', start_factor=1e-6, by_epoch=False, begin=0, end=1500),
+        type='LinearLR', start_factor=1e-7, by_epoch=False, begin=0, end=1500),
     dict(
         type='PolyLR',
         eta_min=0.0,
@@ -48,6 +56,6 @@ param_scheduler = [
 ]
 
 # By default, models are trained on 8 GPUs with 2 images per GPU
-train_dataloader = dict(batch_size=6)
+train_dataloader = dict(batch_size=8)
 val_dataloader = dict(batch_size=1)
 test_dataloader = val_dataloader

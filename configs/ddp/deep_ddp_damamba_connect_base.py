@@ -27,7 +27,7 @@ model = dict(
     accumulation=True,
     pretrained=None,
     backbone=dict(
-        pretrained='weights/DAMamba-B.pth',
+        pretrained='/home/cz/datasets/segsroad_model_weights/DAMamba-B.pth',
         type='DAMamba_base',
     ),
     neck=[
