@@ -9,7 +9,7 @@ for file in ./target/deepglobe/*.p; do
 done
 
 # source directory
-dir=output/deepglobe/diffroad
+dir=output/deepglobe/swinlarge
 
 # source directory
 # dir=$1
@@ -25,10 +25,10 @@ do
     gt_graph=${i}.p
     if test -f "./${dir}/graph/${i}.p"; then
         echo "========================$i======================"
-        python ./deepglobe_metrics/apls/convert.py "./target/deepglobe/${gt_graph}" gt_sp.json
-        python ./deepglobe_metrics/apls/convert.py "./${dir}/graph/${i}.p" prop_sp.json
+        python ./deepglobe_metrics/apls/convert.py "./target/deepglobe/${gt_graph}" gt_deep.json
+        python ./deepglobe_metrics/apls/convert.py "./${dir}/graph/${i}.p" prop_deep.json
         
-        /usr/local/go/bin/go run ./deepglobe_metrics/apls/main.go gt_sp.json prop_sp.json ./$dir/results/apls/$i.txt  spacenet
+        /usr/local/go/bin/go run ./deepglobe_metrics/apls/main.go gt_deep.json prop_deep.json ./$dir/results/apls/$i.txt  spacenet
     fi
 done
 python ./deepglobe_metrics/apls.py --dir $dir

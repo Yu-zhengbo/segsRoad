@@ -19,6 +19,7 @@ data_preprocessor = dict(
     size=crop_size)
 model = dict(
     type='DDP',
+    data_preprocessor = data_preprocessor,
     timesteps=3,
     bit_scale=0.01,
     accumulation=True,

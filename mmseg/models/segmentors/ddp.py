@@ -13,6 +13,45 @@ from mmseg.registry import MODELS
 from .encoder_decoder import EncoderDecoder
 
 
+def heat_map(feat,img='670062.jpg',phrase='backbone',agf='agf',show_image=True):
+    import torch
+    import matplotlib.pyplot as plt
+    import os
+    
+    path = '/home/cz/datasets/roaddataset/deepglobe/images/val'
+
+    image = plt.imread(os.path.join(path,img))
+    
+    
+    b,c,h,w = feat.shape
+    
+    while c%3!=0:
+        c = c-1
+    feat = feat[:,:c,:,:]
+    
+    # h, w, 3, c//3
+    feat = feat.reshape(b,3,c//3,h,w).permute(0,3,4,1,2)[0]
+    
+    # h, w, 3
+    score = torch.sigmoid(feat[..., 4]).max(dim=-1)[0]
+    
+    # resize 
+    score = torch.nn.functional.interpolate(score.unsqueeze(0).unsqueeze(0), size=image.shape[:2], mode='bilinear', align_corners=False).squeeze().squeeze()
+    
+    
+    if show_image:
+        plt.imshow(image, alpha=1)
+        plt.axis('off')
+    plt.imshow(score.detach().cpu().numpy(), alpha=0.5, interpolation='nearest', cmap="jet")
+    plt.axis('off')
+    plt.subplots_adjust(top=1, bottom=0, right=1,  left=0, hspace=0, wspace=0)
+    plt.margins(0, 0)
+    plt.savefig(f'./temp/{agf}_{img.split(".")[0]}_{phrase}.png', dpi=200, bbox_inches='tight', pad_inches = -0.1)
+    
+        
+
+
+
 def log(t, eps=1e-20):
     return torch.log(t.clamp(min=eps))
 
@@ -116,6 +155,7 @@ class DDP(EncoderDecoder):
     def encode_decode(self, img, img_metas):
         """Encode images with backbone and decode into a semantic segmentation
         map of the same size as input."""
+        print(img_metas)
         x = self.extract_feat(img)[0]
         if self.diffusion == "ddim":
             out = self.ddim_sample(x, img_metas)
