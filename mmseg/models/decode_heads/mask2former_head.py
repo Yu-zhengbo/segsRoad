@@ -40,7 +40,7 @@ class Mask2FormerHead(MMDET_Mask2FormerHead):
                  ignore_index=255,
                  **kwargs):
         super().__init__(**kwargs)
-
+        self.threshold = 0.5
         self.num_classes = num_classes
         self.align_corners = align_corners
         self.out_channels = num_classes

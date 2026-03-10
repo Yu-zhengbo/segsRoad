@@ -210,6 +210,11 @@ class SegMultiDataPreProcessor(SegDataPreProcessor):
         inputs = [_input.float() for _input in inputs]
         img2 = [_input.float() for _input in img2]
 
+        for i in range(len(inputs)):
+            inputs[i][inputs[i]<-127] = 0
+        for i in range(len(img2)):
+            img2[i][img2[i]<-127] = 0
+        
         if self._enable_normalize:
             inputs = [(_input - self.mean) / self.std for _input in inputs]
 

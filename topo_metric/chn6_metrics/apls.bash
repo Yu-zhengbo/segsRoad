@@ -1,3 +1,6 @@
+rm -rf gt_sp.json
+rm -rf prop_sp.json
+
 # declare -a arr=( $(jq -r '.test[]' ./data/data_split.json) )
 arr=()
 for file in ./target/chn6/*.p; do

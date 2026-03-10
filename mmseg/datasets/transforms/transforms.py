@@ -2573,7 +2573,7 @@ class RandomMultiResize(RandomResize):
 
     def transform(self, results):
         # 读取图像字段
-        img_fields = copy.deepcopy( results.get('img_fields', ['img']))  # 默认只处理 'img'
+        img_fields = copy.deepcopy(results.get('img_fields', ['img']))  # 默认只处理 'img'
         results['scale'] = self._random_scale()
         self.resize.scale = results['scale']
         results = self.resize(results)
