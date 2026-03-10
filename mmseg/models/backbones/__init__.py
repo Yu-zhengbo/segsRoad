@@ -39,6 +39,10 @@ from .diagmamba import DualDiagMamba_base
 from .cross_damamba import CrossDAMamba_tiny, CrossDAMamba_small, CrossDAMamba_base
 from .dcan import DCAN_Tiny, DCAN_Small, DCAN_Base
 from .mkunet import MKUNet
+from .dino import DinoV3Vit
+from .dino_adapter import DINOAdapter
+from .dino_comer import DINOComer
+# , DINOComer
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
     'ResNeSt', 'MobileNetV2', 'UNet', 'CGNet', 'MobileNetV3',
@@ -50,5 +54,6 @@ __all__ = [
     'DeformableVMAMBA', 'DeformableAggregateVMAMBA', 'Backbone_SpatialMamba',
     'DualMamba_base', 'DualMamba_small', 'DualMamba_tiny', 'DualDiagMamba_base',
     'CrossDAMamba_tiny', 'CrossDAMamba_small', 'CrossDAMamba_base',
-    'DCAN_Tiny', 'DCAN_Small', 'DCAN_Base', 'MKUNet'
+    'DCAN_Tiny', 'DCAN_Small', 'DCAN_Base', 'MKUNet','DinoV3Vit', 'DINOAdapter',
+    'DINOComer'
 ]

@@ -140,7 +140,7 @@ class PackMultiSegInputs(PackSegInputs):
                 img = to_tensor(img).contiguous()
             packed_results['inputs'] = img
 
-        img_fields = copy.deepcopy( results.get('img_fields', ['img']))
+        img_fields = copy.deepcopy(results.get('img_fields', ['img']))
         if 'img' in img_fields:
             img_fields.remove('img')
         for img_field in img_fields:

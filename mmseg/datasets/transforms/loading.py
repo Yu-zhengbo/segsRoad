@@ -799,6 +799,7 @@ class LoadMultiImagesFromFile(LoadImageFromFile):
                  imdecode_backend: str = 'cv2',
                  file_client_args: Optional[dict] = None,
                  ignore_empty: bool = False,
+                 img1='jpg',img2='npy',transpose=False,
                  *,
                  backend_args: Optional[dict] = None) -> None:
         super().__init__(
@@ -808,7 +809,9 @@ class LoadMultiImagesFromFile(LoadImageFromFile):
             file_client_args=file_client_args,
             ignore_empty=ignore_empty,
             backend_args=backend_args)
-    
+        self.img1 = img1
+        self.img2 = img2
+        self.transpose = transpose
 
     def transform(self, results: Dict) -> Dict:
         """Functions to load image.
@@ -821,8 +824,14 @@ class LoadMultiImagesFromFile(LoadImageFromFile):
         """
         filename = results['img_path']
         filename2 = results['dem_path']
-        img = self.read_img(filename)
-        img2 = self.read_dem(filename2)
+        if self.img1 != 'npy':
+            img = self.read_img(filename)
+        else:
+            img = self.read_dem(filename,self.transpose)
+        if self.img2 != 'npy':
+            img2 = self.read_img(filename2)
+        else:
+            img2 = self.read_dem(filename2,self.transpose)
         results['img'] = img
         results['img2'] = img2
         results['img_fields'] = ['img','img2']
@@ -853,7 +862,7 @@ class LoadMultiImagesFromFile(LoadImageFromFile):
             img = img.astype(np.float32)
         return img
     
-    def read_dem(self, filename: str):
+    def read_dem(self, filename: str, transpose=False):
         try:
             img = Image.open(filename)
             img = np.array(img,dtype=np.float32)
@@ -868,6 +877,8 @@ class LoadMultiImagesFromFile(LoadImageFromFile):
         assert img is not None, f'failed to load image: {filename}'
         if self.to_float32:
             img = img.astype(np.float32)
+        if transpose:
+            img = np.transpose(img,[1,2,0])
         return img
 
     def __repr__(self):

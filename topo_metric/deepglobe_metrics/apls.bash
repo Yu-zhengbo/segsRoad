@@ -1,3 +1,6 @@
+rm -rf gt_deep.json
+rm -rf prop_deep.json
+
 # declare -a arr=( $(jq -r '.test[]' ./data/data_split.json) )
 arr=()
 for file in ./target/deepglobe/*.p; do
@@ -9,7 +12,7 @@ for file in ./target/deepglobe/*.p; do
 done
 
 # source directory
-dir=output/deepglobe/swinlarge
+dir=output/deepglobe/fcn_direction
 
 # source directory
 # dir=$1

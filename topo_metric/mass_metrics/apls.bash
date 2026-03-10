@@ -1,3 +1,6 @@
+rm -rf gt_mass.json
+rm -rf prop_mass.json
+
 # declare -a arr=( $(jq -r '.test[]' ./data/data_split.json) )
 arr=()
 for file in ./target/mass/*.p; do

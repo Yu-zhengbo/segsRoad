@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'RoadDataset'
-data_root = '/home/cz/datasets/roaddataset/mass'
+data_root = '/data1/datasets/zhengbo/roaddataset/mass'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),

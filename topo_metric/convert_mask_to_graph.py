@@ -13,6 +13,7 @@ import networkx as nx
 from collections import defaultdict
 import pickle
 import os
+from tqdm import tqdm
 
 def mask_to_graph(mask_path_or_array):
     """
@@ -127,11 +128,11 @@ def convert_mask_to_graph(mask_path_or_array,save_path=None):
 if __name__ == "__main__":
     # mask_path = '/home/cz/datasets/roaddataset/chn6/annotations/val'
     # save_path = '/home/cz/codes/segsRoad/topo_metric/target/chn6'
-    mask_path = '/home/cz/codes/segsRoad/topo_metric/output/deepglobe/swinlarge/vis'
-    save_path = '/home/cz/codes/segsRoad/topo_metric/output/deepglobe/swinlarge/graph'
+    mask_path = '/home/cz/codes/segsRoad/topo_metric/output/deepglobe/fcn_direction/vis'
+    save_path = '/home/cz/codes/segsRoad/topo_metric/output/deepglobe/fcn_direction/graph'
     os.makedirs(save_path,exist_ok=True)
     mask_list = [os.path.join(mask_path, i) for i in os.listdir(mask_path) if (i.endswith('.png') or i.endswith('.jpg'))]
-    for mask_path in mask_list:
+    for mask_path in tqdm(mask_list):
         convert_mask_to_graph(mask_path, save_path)
 
 

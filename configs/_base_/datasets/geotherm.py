@@ -1,27 +1,28 @@
 # dataset settings
-dataset_type = 'RoadDataset'
-data_root = '/data1/datasets/zhengbo/roaddataset/chn6'
-crop_size = (512, 512)
+dataset_type = 'LavaDataset'
+data_root = '/data1/datasets/zhengbo/geotherm/image_labels'
+crop_size = (32, 32)
 train_pipeline = [
-    dict(type='LoadImageFromFile'),
+    dict(type='LoadMultiImagesFromFile',img1='npy',img2='npy',transpose=True),
     dict(type='LoadAnnotations', reduce_zero_label=False),
-    dict(
-        type='RandomResize',
-        scale=(2048, 512),
-        ratio_range=(0.5, 2.0),
-        keep_ratio=True),
-    dict(type='RandomCrop', crop_size=crop_size),#, cat_max_ratio=0.75),
-    dict(type='RandomFlip', prob=0.5),
-    dict(type='PhotoMetricDistortion'),
-    dict(type='PackSegInputs')
+    # dict(
+    #     type='RandomMultiResize',
+    #     scale=(1024, 256),
+    #     ratio_range=(0.5, 2.0),
+    #     keep_ratio=True),
+    dict(type='RandomMultiCrop', crop_size=crop_size),#, cat_max_ratio=0.75),
+    dict(type='RandomMultiFlip', prob=0.5),
+    # dict(type='PhotoMetricDistortion'),
+    # dict(type='ConcatCDInput'),
+    dict(type='PackMultiSegInputs')
 ]
 test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(512, 512), keep_ratio=True),
+    dict(type='LoadMultiImagesFromFile',img1='npy',img2='npy',transpose=True),
+    # dict(type='MultiResize', scale=(256, 256), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
     dict(type='LoadAnnotations', reduce_zero_label=False),
-    dict(type='PackSegInputs')
+    dict(type='PackMultiSegInputs')
 ]
 
 
@@ -43,7 +44,7 @@ tta_pipeline = [
         ])
 ]
 train_dataloader = dict(
-    batch_size=4,
+    batch_size=16,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='InfiniteSampler', shuffle=True),
@@ -51,29 +52,27 @@ train_dataloader = dict(
         type=dataset_type,
         data_root=data_root,
         data_prefix=dict(
-            img_path='images/train', seg_map_path='annotations/train'),
+            img_path='train/A64', seg_map_path='train/ann', dem_path='train/B8'),
+        img_suffix = '.npy',
+        seg_map_suffix = '.png',
+        dem_suffix = '.npy',
         pipeline=train_pipeline))
 val_dataloader = dict(
     batch_size=1,
-    num_workers=4,
+    num_workers=1,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
+        data_prefix=dict(
+            img_path='test/A64', seg_map_path='test/ann', dem_path='test/B8'),
+        img_suffix = '.npy',
+        seg_map_suffix = '.png',
+        dem_suffix = '.npy',
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
-# test_dataloader = dict(
-#     batch_size=1,
-#     num_workers=4,
-#     persistent_workers=True,
-#     sampler=dict(type='DefaultSampler', shuffle=False),
-#     dataset=dict(
-#         type=dataset_type,
-#         data_root=data_root,
-#         data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
-#         pipeline=tta_pipeline))
+
 
 
 val_evaluator = dict(

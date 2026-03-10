@@ -13,6 +13,32 @@ from mmseg.utils import (ConfigType, OptConfigType, OptMultiConfig,
 from .base import BaseSegmentor
 
 
+def count_trainable_params(model):
+    trainable = 0
+    frozen = 0
+    trainable_tensors = 0
+    frozen_tensors = 0
+
+    for p in model.parameters():
+        n = p.numel()
+        if p.requires_grad:
+            trainable += n
+            trainable_tensors += 1
+        else:
+            frozen += n
+            frozen_tensors += 1
+
+    total = trainable + frozen
+    return {
+        "total_params": total,
+        "trainable_params": trainable,
+        "frozen_params": frozen,
+        "trainable_ratio": trainable / total if total else 0.0,
+        "frozen_ratio": frozen / total if total else 0.0,
+        "trainable_tensors": trainable_tensors,
+        "frozen_tensors": frozen_tensors,
+    }
+
 @MODELS.register_module()
 class EncoderDecoder(BaseSegmentor):
     """Encoder Decoder segmentors.
@@ -88,6 +114,8 @@ class EncoderDecoder(BaseSegmentor):
             backbone.pretrained = pretrained
         if backbone is not None:
             self.backbone = MODELS.build(backbone)
+            backbone_stats = count_trainable_params(self.backbone)
+            print('backbone:',backbone_stats)
         if neck is not None:
             self.neck = MODELS.build(neck)
         if decode_head is not None:
@@ -96,7 +124,9 @@ class EncoderDecoder(BaseSegmentor):
 
         self.train_cfg = train_cfg
         self.test_cfg = test_cfg
-
+        
+        
+        
         # assert self.with_decode_head
 
     def _init_decode_head(self, decode_head: ConfigType) -> None:

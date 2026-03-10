@@ -174,6 +174,7 @@ class MultiEncoderDecoder(BaseSegmentor):
                  test_cfg: OptConfigType = None,
                  data_preprocessor: OptConfigType = None,
                  pretrained: Optional[str] = None,
+                 pretrained_dem: Optional[str] = None,
                  init_cfg: OptMultiConfig = None):
         super().__init__(
             data_preprocessor=data_preprocessor, init_cfg=init_cfg)
@@ -181,6 +182,11 @@ class MultiEncoderDecoder(BaseSegmentor):
             assert backbone.get('pretrained') is None, \
                 'both backbone and segmentor set pretrained weight'
             backbone.pretrained = pretrained
+            
+        if pretrained_dem is not None:
+            assert backbone_dem.get('pretrained') is None, \
+                'both backbone and segmentor set pretrained weight'
+            backbone_dem.pretrained = pretrained_dem
 
         self.fusion_mode = fusion_mode
         if self.fusion_mode == 'single':
@@ -298,9 +304,9 @@ class MultiEncoderDecoder(BaseSegmentor):
         if self.fusion_mode == 'single':
             pass
         elif self.fusion_mode == 'add':
-            # x = x + x_dem
-            for i in range(len(x)):
-                x[i] += x_dem[i]
+            x = tuple(a + b for a, b in zip(x, x_dem))
+            # for i in range(len(x)):
+            #     x[i] += x_dem[i]
         elif self.fusion_mode == 'concat':
             for i in range(len(x)):
                 x[i] = self.embed_dims2_to_1[i](torch.cat([x[i], x_dem[i]], dim=1))
@@ -364,6 +370,11 @@ class MultiEncoderDecoder(BaseSegmentor):
             dict[str, Tensor]: a dictionary of loss components
         """
 
+        seg_label = self.decode_head._stack_batch_gt(data_samples)
+        if torch.all(seg_label==self.decode_head.ignore_index):
+            return {}
+        
+        
         x = self.extract_feat(inputs, dem)
 
         losses = dict()
