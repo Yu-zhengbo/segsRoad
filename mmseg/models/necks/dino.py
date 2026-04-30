@@ -77,41 +77,72 @@ class DINONeck(BaseModule):
         else:
             self.upsample = nn.Upsample(scale_factor=2, mode=upsample)
         
-        out_channels = [in_channels//2**i for i in range(num_in)]
-
-        self.conv1 = ConvModule(in_channels,out_channels[0],kernel_size=3,padding=1,inplace=False)
-        self.conv2 = ConvModule(out_channels[0],out_channels[0],kernel_size=3,padding=1,inplace=False)
-        self.conv3 = ConvModule(out_channels[0],out_channels[1],kernel_size=3,padding=1,inplace=False)
-        self.conv4 = ConvModule(out_channels[1],out_channels[2],kernel_size=3,padding=1,inplace=False)
-        self.conv5 = ConvModule(out_channels[2],out_channels[3],kernel_size=3,padding=1,inplace=False)
+        # out_channels = [in_channels//2**i for i in range(num_in)]
+        out_channels = [in_channels for i in range(num_in)]
+        # out_channels = [512 for i in range(num_in)]
+        
+        # self.conv1 = ConvModule(in_channels,out_channels[0],kernel_size=3,padding=1,inplace=False)
+        # self.conv2 = ConvModule(out_channels[0],out_channels[0],kernel_size=3,padding=1,inplace=False)
+        # self.conv3 = ConvModule(out_channels[0],out_channels[1],kernel_size=3,padding=1,inplace=False)
+        # self.conv4 = ConvModule(out_channels[1],out_channels[2],kernel_size=3,padding=1,inplace=False)
+        # self.conv5 = ConvModule(out_channels[2],out_channels[3],kernel_size=3,padding=1,inplace=False)
+        
+        # self.inter_conv1 = ConvModule(in_channels,out_channels[0],kernel_size=1,inplace=False)
+        # self.inter_conv2 = ConvModule(in_channels,out_channels[1],kernel_size=1,inplace=False)
+        # self.inter_conv3 = ConvModule(in_channels,out_channels[2],kernel_size=1,inplace=False)
+        
+        self.conv1 = ConvModule(in_channels,out_channels[0],kernel_size=3,padding=1,inplace=False,stride=2)
+        self.conv2 = ConvModule(out_channels[0],out_channels[1],kernel_size=3,padding=1,inplace=False)
+        self.conv3 = ConvModule(out_channels[1],out_channels[2],kernel_size=3,padding=1,inplace=False)
+        self.conv4 = ConvModule(out_channels[2],out_channels[3],kernel_size=3,padding=1,inplace=False)
         
         self.inter_conv1 = ConvModule(in_channels,out_channels[0],kernel_size=1,inplace=False)
         self.inter_conv2 = ConvModule(in_channels,out_channels[1],kernel_size=1,inplace=False)
         self.inter_conv3 = ConvModule(in_channels,out_channels[2],kernel_size=1,inplace=False)
         
-
+        ## input 1024, 40, 40 * 4
     def forward(self, inputs):
-        outs = [inputs[-1]]  # 1024, 1/16
-        x = inputs[-1]
-        x = self.conv1(x)
-        x = self.conv2(x)
+        x0 = self.conv1(inputs[-1])
         
-        x = self.upsample(x)
-        inter_fpn = self.inter_conv1(inputs[0])
+        x = self.upsample(x0)
+        inter_fpn = self.inter_conv1(inputs[-2])
         x = x + F.interpolate(inter_fpn, size=x.shape[-2:], mode="nearest")
-        x = self.conv3(x)
-        outs.append(x)  # 512, 1/8
+        x1 = self.conv2(x)
         
-        x = self.upsample(x)
-        inter_fpn = self.inter_conv2(inputs[1])
+        x = self.upsample(x1)
+        inter_fpn = self.inter_conv2(inputs[0])
         x = x + F.interpolate(inter_fpn, size=x.shape[-2:], mode="nearest")
-        x = self.conv4(x)
-        outs.append(x)  # 256, 1/4
-
-        inter_fpn = self.inter_conv3(inputs[2])
+        x2 = self.conv3(x)
+        
+        x = self.upsample(x2)
+        inter_fpn = self.inter_conv3(inputs[1])
         x = x + F.interpolate(inter_fpn, size=x.shape[-2:], mode="nearest")
-        x = self.conv5(x)
-        outs.append(x)  # 128, 1/4
+        x3 = self.conv4(x)
+
+        return [x3,x2,x1,x0]
+
+    # def forward(self, inputs):
+    #     outs = [inputs[-1]]  # 1024, 1/16
+    #     x = inputs[-1]
+    #     x = self.conv1(x)
+    #     x = self.conv2(x)
+        
+    #     x = self.upsample(x)
+    #     inter_fpn = self.inter_conv1(inputs[0])
+    #     x = x + F.interpolate(inter_fpn, size=x.shape[-2:], mode="nearest")
+    #     x = self.conv3(x)
+    #     outs.append(x)  # 512, 1/8
+        
+    #     x = self.upsample(x)
+    #     inter_fpn = self.inter_conv2(inputs[1])
+    #     x = x + F.interpolate(inter_fpn, size=x.shape[-2:], mode="nearest")
+    #     x = self.conv4(x)
+    #     outs.append(x)  # 256, 1/4
+
+    #     inter_fpn = self.inter_conv3(inputs[2])
+    #     x = x + F.interpolate(inter_fpn, size=x.shape[-2:], mode="nearest")
+    #     x = self.conv5(x)
+    #     outs.append(x)  # 128, 1/4
 
 
-        return tuple(outs[::-1])
+    #     return tuple(outs[::-1])

@@ -1,48 +1,94 @@
 _base_ = [
-    '../_base_/default_runtime.py', '../_base_/datasets/deepglobe.py'
+    '../_base_/datasets/deepglobe.py',
+    '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
-pretrained = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_base_patch4_window12_384_20220317-55b0104a.pth'  # noqa
 
+# dataset settings
+dataset_type = 'RoadDataset'
+data_root = '/data1/datasets/zhengbo/roaddataset/deepglobe'
 crop_size = (512, 512)
+
+# dataset config
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', reduce_zero_label=False),
+    dict(
+        type='RandomChoiceResize',
+        scales=[int(x * 0.1 * 512) for x in range(5, 21)],
+        resize_type='ResizeShortestEdge',
+        max_size=2048),
+    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.99),
+    dict(type='RandomFlip', prob=0.5),
+    dict(type='PhotoMetricDistortion'),
+    dict(type='PackSegInputs')
+]
+
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='Resize', scale=(1024, 1024), keep_ratio=True),
+    dict(type='LoadAnnotations', reduce_zero_label=False),
+    dict(type='PackSegInputs')
+]
+
+train_dataloader = dict(
+    batch_size=6,
+    num_workers=6,
+    persistent_workers=True,
+    sampler=dict(type='InfiniteSampler', shuffle=True),
+    dataset=dict(
+        type=dataset_type,
+        data_root=data_root,
+        reduce_zero_label=False,
+        data_prefix=dict(
+            img_path='images/train', seg_map_path='annotations/train'),
+        pipeline=train_pipeline))
+val_dataloader = dict(
+    batch_size=1,
+    num_workers=1,
+    persistent_workers=True,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type=dataset_type,
+        data_root=data_root,
+        reduce_zero_label=False,
+        data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
+        pipeline=test_pipeline))
+test_dataloader = val_dataloader
+
+
+num_classes = 2
+crop_size = (512, 512)
+# model settings
+norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
-    mean=[123.675, 116.28, 103.53],
-    std=[58.395, 57.12, 57.375],
+    # mean=[123.675, 116.28, 103.53],
+    # std=[58.395, 57.12, 57.375],
+    mean = [109.65, 104.805, 75.48],
+    std = [54.315, 39.78, 36.465],
     bgr_to_rgb=True,
     pad_val=0,
     seg_pad_val=255,
     size=crop_size)
-num_classes = 2
-
-depths = [2, 2, 18, 2]
 model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='SwinTransformer',
-        pretrain_img_size=384,
-        embed_dims=128,
-        depths=depths,
-        num_heads=[4, 8, 16, 32],
-        window_size=12,
-        mlp_ratio=4,
-        qkv_bias=True,
-        qk_scale=None,
-        drop_rate=0.,
-        attn_drop_rate=0.,
-        drop_path_rate=0.3,
-        patch_norm=True,
-        out_indices=(0, 1, 2, 3),
-        with_cp=False,
-        frozen_stages=-1,
-        init_cfg=dict(type='Pretrained', checkpoint=pretrained)),
+        type='DINOComer',
+        model = 'vit_large_patch16_dinov3_qkvb.sat493m',
+        # model = 'vit_7b_patch16_dinov3.sat493m',
+        embed_dim = 1024,
+        interaction_indexes=[[0, 5], [6, 11], [12, 17], [18, 23]],
+        # interaction_indexes=[[0, 11], [12, 17], [18, 20], [21, 23]],
+        freeze = True,
+    ),
     decode_head=dict(
         type='Mask2FormerHead',
-        in_channels=[128, 256, 512, 1024],
+        in_channels=[1024, 1024, 1024, 1024],
         strides=[4, 8, 16, 32],
-        feat_channels=256,
-        out_channels=256,
+        feat_channels=1024,
+        out_channels=1024,
         num_classes=num_classes,
         num_queries=100,
         num_transformer_feat_level=3,
@@ -56,8 +102,8 @@ model = dict(
                 num_layers=6,
                 layer_cfg=dict(  # DeformableDetrTransformerEncoderLayer
                     self_attn_cfg=dict(  # MultiScaleDeformableAttention
-                        embed_dims=256,
-                        num_heads=8,
+                        embed_dims=1024,
+                        num_heads=32,
                         num_levels=3,
                         num_points=4,
                         im2col_step=64,
@@ -66,39 +112,39 @@ model = dict(
                         norm_cfg=None,
                         init_cfg=None),
                     ffn_cfg=dict(
-                        embed_dims=256,
+                        embed_dims=1024,
                         feedforward_channels=1024,
                         num_fcs=2,
                         ffn_drop=0.0,
                         act_cfg=dict(type='ReLU', inplace=True))),
                 init_cfg=None),
             positional_encoding=dict(  # SinePositionalEncoding
-                num_feats=128, normalize=True),
+                num_feats=512, normalize=True),
             init_cfg=None),
         enforce_decoder_input_project=False,
         positional_encoding=dict(  # SinePositionalEncoding
-            num_feats=128, normalize=True),
+            num_feats=512, normalize=True),
         transformer_decoder=dict(  # Mask2FormerTransformerDecoder
             return_intermediate=True,
             num_layers=9,
             layer_cfg=dict(  # Mask2FormerTransformerDecoderLayer
                 self_attn_cfg=dict(  # MultiheadAttention
-                    embed_dims=256,
-                    num_heads=8,
+                    embed_dims=1024,
+                    num_heads=32,
                     attn_drop=0.0,
                     proj_drop=0.0,
                     dropout_layer=None,
                     batch_first=True),
                 cross_attn_cfg=dict(  # MultiheadAttention
-                    embed_dims=256,
-                    num_heads=8,
+                    embed_dims=1024,
+                    num_heads=32,
                     attn_drop=0.0,
                     proj_drop=0.0,
                     dropout_layer=None,
                     batch_first=True),
                 ffn_cfg=dict(
-                    embed_dims=256,
-                    feedforward_channels=2048,
+                    embed_dims=1024,
+                    feedforward_channels=1024,
                     num_fcs=2,
                     act_cfg=dict(type='ReLU', inplace=True),
                     ffn_drop=0.0,
@@ -144,23 +190,12 @@ model = dict(
                 ]),
             sampler=dict(type='mmdet.MaskPseudoSampler'))),
     train_cfg=dict(),
-    test_cfg=dict(mode='whole'))
+    test_cfg=dict(mode='whole')
+    # test_cfg=dict(mode='slide', crop_size=(512, 512), stride=(341, 341)
+    )
 
-# dataset config
-train_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', reduce_zero_label=False),
-    dict(
-        type='RandomChoiceResize',
-        scales=[int(x * 0.1 * 512) for x in range(5, 21)],
-        resize_type='ResizeShortestEdge',
-        max_size=2048),
-    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
-    dict(type='RandomFlip', prob=0.5),
-    dict(type='PhotoMetricDistortion'),
-    dict(type='PackSegInputs')
-]
-train_dataloader = dict(batch_size=2, dataset=dict(pipeline=train_pipeline))
+
+
 
 # set all layers in backbone to lr_mult=0.1
 # set all norm layers, position_embeding,
@@ -178,19 +213,20 @@ custom_keys = {
     'query_feat': embed_multi,
     'level_embed': embed_multi
 }
-custom_keys.update({
-    f'backbone.stages.{stage_id}.blocks.{block_id}.norm': backbone_norm_multi
-    for stage_id, num_blocks in enumerate(depths)
-    for block_id in range(num_blocks)
-})
-custom_keys.update({
-    f'backbone.stages.{stage_id}.downsample.norm': backbone_norm_multi
-    for stage_id in range(len(depths) - 1)
-})
+# custom_keys.update({
+#     f'backbone.stages.{stage_id}.blocks.{block_id}.norm': backbone_norm_multi
+#     for stage_id, num_blocks in enumerate(depths)
+#     for block_id in range(num_blocks)
+# })
+# custom_keys.update({
+#     f'backbone.stages.{stage_id}.downsample.norm': backbone_norm_multi
+#     for stage_id in range(len(depths) - 1)
+# })
 # optimizer
 optimizer = dict(
     type='AdamW', lr=0.0001, weight_decay=0.05, eps=1e-8, betas=(0.9, 0.999))
 optim_wrapper = dict(
+    _delete_=True,
     type='OptimWrapper',
     optimizer=optimizer,
     clip_grad=dict(max_norm=0.01, norm_type=2),
@@ -207,6 +243,9 @@ param_scheduler = [
         by_epoch=False)
 ]
 
+train_dataloader = dict(batch_size=4, num_workers=4)
+val_dataloader = dict(batch_size=1, num_workers=1)
+
 # training schedule for 160k
 train_cfg = dict(
     type='IterBasedTrainLoop', max_iters=40000, val_interval=4000)
@@ -217,13 +256,9 @@ default_hooks = dict(
     logger=dict(type='LoggerHook', interval=50, log_metric_by_epoch=False),
     param_scheduler=dict(type='ParamSchedulerHook'),
     checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, interval=4000,
+        type='CheckpointHook', by_epoch=False, interval=40000,
         save_best='mIoU'),
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
 
-# Default setting for scaling LR automatically
-#   - `enable` means enable scaling LR automatically
-#       or not by default.
-#   - `base_batch_size` = (8 GPUs) x (2 samples per GPU).
 auto_scale_lr = dict(enable=False, base_batch_size=16)

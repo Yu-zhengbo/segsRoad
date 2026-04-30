@@ -42,6 +42,7 @@ from .mfa_uper_head import MFAUPerHead
 from .mfa_pcs_uper_head import MFAPCSUPerHead
 from .DenoiseUNet import DenoiseUNet
 from .mkunet_head import MKHead
+from .sam_head import SamHead
 
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
@@ -53,5 +54,5 @@ __all__ = [
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
     'DeformableHeadWithTime','DeformableHeadWithTimeConnect','MFAUPerHead',
-    'MFAPCSUPerHead','DenoiseUNet','MKHead'
+    'MFAPCSUPerHead','DenoiseUNet','MKHead','SamHead'
 ]

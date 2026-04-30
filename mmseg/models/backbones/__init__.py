@@ -42,6 +42,11 @@ from .mkunet import MKUNet
 from .dino import DinoV3Vit
 from .dino_adapter import DINOAdapter
 from .dino_comer import DINOComer
+from .dino_myself import DINOAdapterMyself
+from .dino_myself_v2 import DINOAdapterMyselfv2
+from .sam import SAM3
+from .sam_myself import SAM3Myself
+from .sam_backbone import SAM3Vit, SAM3VitComer
 # , DINOComer
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
@@ -55,5 +60,6 @@ __all__ = [
     'DualMamba_base', 'DualMamba_small', 'DualMamba_tiny', 'DualDiagMamba_base',
     'CrossDAMamba_tiny', 'CrossDAMamba_small', 'CrossDAMamba_base',
     'DCAN_Tiny', 'DCAN_Small', 'DCAN_Base', 'MKUNet','DinoV3Vit', 'DINOAdapter',
-    'DINOComer'
+    'DINOComer','DINOAdapterMyself','DINOAdapterMyselfv2', 'SAM3', 'SAM3Myself',
+    'SAM3Vit','SAM3VitComer'
 ]

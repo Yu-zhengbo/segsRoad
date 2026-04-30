@@ -352,8 +352,15 @@ class VisionTransformer(BaseModule):
                         state_dict['pos_embed'],
                         (h // self.patch_size, w // self.patch_size),
                         (pos_size, pos_size), self.interpolate_mode)
-
-            load_state_dict(self, state_dict, strict=False, logger=None)
+            new_state_dict = {}
+            for k, v in state_dict.items():
+                k = k.replace('backbone.', '')   # remove prefix backbone.
+                k = k.replace('attn.qkv.weight', 'attn.attn.in_proj_weight')
+                k = k.replace('attn.qkv.bias', 'attn.attn.in_proj_bias')
+                k = k.replace('attn.proj.weight', 'attn.attn.out_proj.weight')
+                k = k.replace('attn.proj.bias', 'attn.attn.out_proj.bias')
+                new_state_dict[k] = v
+            load_state_dict(self, new_state_dict, strict=False, logger=None)
         elif self.init_cfg is not None:
             super().init_weights()
         else:

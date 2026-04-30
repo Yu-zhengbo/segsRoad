@@ -1,13 +1,12 @@
 _base_ = [
     '../_base_/datasets/deepglobe.py',
-    '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py'
+    '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
-
 
 # dataset settings
 dataset_type = 'RoadDataset'
 data_root = '/data1/datasets/zhengbo/roaddataset/deepglobe'
-crop_size = (512, 512)
+crop_size = (560, 560)
 
 # dataset config
 train_pipeline = [
@@ -58,15 +57,14 @@ test_dataloader = val_dataloader
 
 
 num_classes = 2
-crop_size = (512, 512)
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
     # mean=[123.675, 116.28, 103.53],
     # std=[58.395, 57.12, 57.375],
-    mean = [109.65, 104.805, 75.48],
-    std = [54.315, 39.78, 36.465],
+    mean=[127.5, 127.5, 127.5],
+    std=[127.5, 127.5, 127.5],
     bgr_to_rgb=True,
     pad_val=0,
     seg_pad_val=255,
@@ -75,22 +73,127 @@ model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='DINOComer',
-        model = 'vit_large_patch16_dinov3_qkvb.sat493m',
-        # model = 'vit_7b_patch16_dinov3.sat493m',
-        embed_dim = 1024,
-        interaction_indexes=[[0, 5], [6, 11], [12, 17], [18, 23]],
-        # interaction_indexes=[[0, 11], [12, 17], [18, 20], [21, 23]],
-        freeze = True,
+        type='SAM3',
+        img_size=crop_size[0],
+        precompute_resolution=crop_size[0],
+        image_only=False,
+        mask2former=True,
+        num_class=2,
     ),
+    # decode_head=dict(
+    #     type='Mask2FormerHead',
+    #     in_channels=[256, 256, 256],
+    #     strides=[4, 8, 16],
+    #     feat_channels=1024,
+    #     out_channels=1024,
+    #     num_classes=num_classes,
+    #     num_queries=100,
+    #     num_transformer_feat_level=3,
+    #     align_corners=False,
+    #     pixel_decoder=dict(
+    #         type='mmdet.MSDeformAttnPixelDecoder',
+    #         num_outs=3,
+    #         norm_cfg=dict(type='GN', num_groups=32),
+    #         act_cfg=dict(type='ReLU'),
+    #         encoder=dict(  # DeformableDetrTransformerEncoder
+    #             num_layers=6,
+    #             layer_cfg=dict(  # DeformableDetrTransformerEncoderLayer
+    #                 self_attn_cfg=dict(  # MultiScaleDeformableAttention
+    #                     embed_dims=1024,
+    #                     num_heads=32,
+    #                     num_levels=3,
+    #                     num_points=4,
+    #                     im2col_step=64,
+    #                     dropout=0.0,
+    #                     batch_first=True,
+    #                     norm_cfg=None,
+    #                     init_cfg=None),
+    #                 ffn_cfg=dict(
+    #                     embed_dims=1024,
+    #                     feedforward_channels=4096,
+    #                     num_fcs=2,
+    #                     ffn_drop=0.0,
+    #                     act_cfg=dict(type='ReLU', inplace=True))),
+    #             init_cfg=None),
+    #         positional_encoding=dict(  # SinePositionalEncoding
+    #             num_feats=512, normalize=True),
+    #         init_cfg=None),
+    #     enforce_decoder_input_project=False,
+    #     positional_encoding=dict(  # SinePositionalEncoding
+    #         num_feats=512, normalize=True),
+    #     transformer_decoder=dict(  # Mask2FormerTransformerDecoder
+    #         return_intermediate=True,
+    #         num_layers=9,
+    #         layer_cfg=dict(  # Mask2FormerTransformerDecoderLayer
+    #             self_attn_cfg=dict(  # MultiheadAttention
+    #                 embed_dims=1024,
+    #                 num_heads=32,
+    #                 attn_drop=0.0,
+    #                 proj_drop=0.0,
+    #                 dropout_layer=None,
+    #                 batch_first=True),
+    #             cross_attn_cfg=dict(  # MultiheadAttention
+    #                 embed_dims=1024,
+    #                 num_heads=32,
+    #                 attn_drop=0.0,
+    #                 proj_drop=0.0,
+    #                 dropout_layer=None,
+    #                 batch_first=True),
+    #             ffn_cfg=dict(
+    #                 embed_dims=1024,
+    #                 feedforward_channels=4096,
+    #                 num_fcs=2,
+    #                 act_cfg=dict(type='ReLU', inplace=True),
+    #                 ffn_drop=0.0,
+    #                 dropout_layer=None,
+    #                 add_identity=True)),
+    #         init_cfg=None),
+    #     loss_cls=dict(
+    #         type='mmdet.CrossEntropyLoss',
+    #         use_sigmoid=False,
+    #         loss_weight=2.0,
+    #         reduction='mean',
+    #         class_weight=[1.0] * num_classes + [0.1]),
+    #     loss_mask=dict(
+    #         type='mmdet.CrossEntropyLoss',
+    #         use_sigmoid=True,
+    #         reduction='mean',
+    #         loss_weight=5.0),
+    #     loss_dice=dict(
+    #         type='mmdet.DiceLoss',
+    #         use_sigmoid=True,
+    #         activate=True,
+    #         reduction='mean',
+    #         naive_dice=True,
+    #         eps=1.0,
+    #         loss_weight=5.0),
+    #     train_cfg=dict(
+    #         num_points=12544,
+    #         oversample_ratio=3.0,
+    #         importance_sample_ratio=0.75,
+    #         assigner=dict(
+    #             type='mmdet.HungarianAssigner',
+    #             match_costs=[
+    #                 dict(type='mmdet.ClassificationCost', weight=2.0),
+    #                 dict(
+    #                     type='mmdet.CrossEntropyLossCost',
+    #                     weight=5.0,
+    #                     use_sigmoid=True),
+    #                 dict(
+    #                     type='mmdet.DiceCost',
+    #                     weight=5.0,
+    #                     pred_act=True,
+    #                     eps=1.0)
+    #             ]),
+    #         sampler=dict(type='mmdet.MaskPseudoSampler'))),
     decode_head=dict(
-        type='Mask2FormerHead',
-        in_channels=[1024, 1024, 1024, 1024],
-        strides=[4, 8, 16, 32],
+        type='SamHead',
+        in_channels=[256, 256, 256],
+        strides=[4, 8, 16],
         feat_channels=1024,
         out_channels=1024,
         num_classes=num_classes,
-        num_queries=100,
+        num_queries=200,
         num_transformer_feat_level=3,
         align_corners=False,
         pixel_decoder=dict(
@@ -239,26 +342,33 @@ param_scheduler = [
         eta_min=0,
         power=0.9,
         begin=0,
-        end=160000,
+        end=40000,
         by_epoch=False)
 ]
 
-train_dataloader = dict(batch_size=6, num_workers=6)
+train_dataloader = dict(batch_size=4, num_workers=4)
 val_dataloader = dict(batch_size=1, num_workers=1)
 
-# training schedule for 160k
-train_cfg = dict(
-    type='IterBasedTrainLoop', max_iters=160000, val_interval=16000)
-val_cfg = dict(type='ValLoop')
-test_cfg = dict(type='TestLoop')
+train_cfg = dict(type='IterBasedTrainLoop', max_iters=40000, val_interval=4000)
+
 default_hooks = dict(
-    timer=dict(type='IterTimerHook'),
-    logger=dict(type='LoggerHook', interval=500, log_metric_by_epoch=False),
-    param_scheduler=dict(type='ParamSchedulerHook'),
-    checkpoint=dict(
-        type='CheckpointHook', by_epoch=False, interval=16000,
-        save_best='mIoU'),
-    sampler_seed=dict(type='DistSamplerSeedHook'),
-    visualization=dict(type='SegVisualizationHook'))
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+)
+
+
+# training schedule for 160k
+# train_cfg = dict(
+#     type='IterBasedTrainLoop', max_iters=160000, val_interval=16000)
+# val_cfg = dict(type='ValLoop')
+# test_cfg = dict(type='TestLoop')
+# default_hooks = dict(
+#     timer=dict(type='IterTimerHook'),
+#     logger=dict(type='LoggerHook', interval=500, log_metric_by_epoch=False),
+#     param_scheduler=dict(type='ParamSchedulerHook'),
+#     checkpoint=dict(
+#         type='CheckpointHook', by_epoch=False, interval=160000,
+#         save_best='mIoU'),
+#     sampler_seed=dict(type='DistSamplerSeedHook'),
+#     visualization=dict(type='SegVisualizationHook'))
 
 auto_scale_lr = dict(enable=False, base_batch_size=16)

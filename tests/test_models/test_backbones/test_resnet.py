@@ -8,7 +8,7 @@ from torch.nn.modules import AvgPool2d, GroupNorm
 from mmseg.models.backbones import ResNet, ResNetV1d
 from mmseg.models.backbones.resnet import BasicBlock, Bottleneck
 from mmseg.models.utils import ResLayer
-from .utils import all_zeros, check_norm_state, is_block, is_norm
+# from .utils import all_zeros, check_norm_state, is_block, is_norm
 
 
 def test_resnet_basic_block():
@@ -573,3 +573,25 @@ def test_resnet_backbone():
     assert feat[1].shape == torch.Size([1, 128, 28, 28])
     assert feat[2].shape == torch.Size([1, 256, 14, 14])
     assert feat[3].shape == torch.Size([1, 512, 7, 7])
+
+
+if __name__ == "__main__":
+    from mmseg.registry import MODELS
+    norm_cfg = dict(type='SyncBN', requires_grad=True)
+    backbone=dict(
+        type='ResNetV1c',
+        depth=18,
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),
+        dilations=(1, 1, 2, 4),
+        strides=(1, 2, 2, 2),
+        norm_cfg=norm_cfg,
+        init_cfg='open-mmlab://resnet18_v1c',
+        norm_eval=False,
+        style='pytorch',
+        contract_dilation=True)
+    model = MODELS.build(backbone).cuda()
+    input = torch.randn(1,3,560,560).cuda()
+    output = model(input)
+    for i in output:
+        print(i.shape)
