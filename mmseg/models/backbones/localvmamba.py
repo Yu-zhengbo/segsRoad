@@ -24,9 +24,9 @@ try:
     "sscore acts the same as mamba_ssm"
     SSMODE = "sscore"
     import selective_scan_cuda_core
-    print("Using \"selective_scan_cuda_core\"")
+    # print("Using \"selective_scan_cuda_core\"")
 except Exception as e:
-    warnings.warn(f"{e}\n\"selective_scan_cuda_core\" not found, use default \"selective_scan_cuda\" instead.")
+    # warnings.warn(f"{e}\n\"selective_scan_cuda_core\" not found, use default \"selective_scan_cuda\" instead.")
     # print(e, flush=True)
     SSMODE = "mamba_ssm"
     import selective_scan_cuda

@@ -259,11 +259,18 @@ class CTI_toC(nn.Module):
 
             if self.cnn_feature_interaction:               
                 deform_input = deform_inputs_only_one(query, H*16, W*16)
-                query = self.cfinter(query=self.query_norm(query), reference_points=deform_input[0],
-                          feat=self.feat_norm(query), spatial_shapes=deform_input[1],
-                          level_start_index=deform_input[2],
-                          H=H, W=W)               
-            
+                # query = self.cfinter(query=self.query_norm(query), reference_points=deform_input[0],
+                #           feat=self.feat_norm(query), spatial_shapes=deform_input[1],
+                #           level_start_index=deform_input[2],
+                #           H=H, W=W)               
+                query = self.cfinter(
+                            query=self.query_norm(query), 
+                            reference_points=deform_input[0], # 对应第二层的坐标
+                            feat=self.feat_norm(feat),       # 对应第二层的特征向量
+                            spatial_shapes=deform_input[1][1:2],           # 保持 2D: tensor([[32, 32]])
+                            level_start_index=deform_input[2].new_zeros(1), # 只有一层时，起始偏移量必须是 0
+                            H=H, W=W
+                        ) + query
             return query
         
         if self.with_cp and query.requires_grad:
@@ -312,11 +319,18 @@ class Extractor_CTI(nn.Module):
 
             if self.cnn_feature_interaction:               
                 deform_input = deform_inputs_only_one(query, H*16, W*16)
-                query = self.cfinter(query=self.query_norm(query), reference_points=deform_input[0],
-                          feat=self.feat_norm(query), spatial_shapes=deform_input[1],
-                          level_start_index=deform_input[2],
-                          H=H, W=W)               
-            
+                # query = self.cfinter(query=self.query_norm(query), reference_points=deform_input[0],
+                #           feat=self.feat_norm(query), spatial_shapes=deform_input[1],
+                #           level_start_index=deform_input[2],
+                #           H=H, W=W)               
+                query = self.cfinter(
+                            query=self.query_norm(query), 
+                            reference_points=deform_input[0], # 对应第二层的坐标
+                            feat=self.feat_norm(feat),       # 对应第二层的特征向量
+                            spatial_shapes=deform_input[1][1:2],           # 保持 2D: tensor([[32, 32]])
+                            level_start_index=deform_input[2].new_zeros(1), # 只有一层时，起始偏移量必须是 0
+                            H=H, W=W
+                        ) + query
             return query
         
         if self.with_cp and query.requires_grad:
@@ -348,16 +362,18 @@ class CTI_toV(nn.Module):
         
         def _inner_forward(query, feat, H, W):
             B, N, C = feat.shape
-            c1 = self.attn(self.query_norm(feat), reference_points,
-                             self.feat_norm(feat), spatial_shapes,
-                             level_start_index, None)
-
-            c1 = c1 + self.drop_path(self.ffn(self.ffn_norm(c1), H, W)) 
-
+            # c1 = self.attn(self.query_norm(feat), reference_points,
+            #                  self.feat_norm(feat), spatial_shapes,
+            #                  level_start_index, None)
+            c1 = feat + self.drop_path(self.ffn(self.ffn_norm(feat), H, W))
+            # print(H,W,reference_points.shape)
+            query = self.attn(self.query_norm(query), reference_points[:,4096:4096+1024,:,:] if H == 32 else reference_points[:,16384:16384+4096,:,:],
+                             self.feat_norm(c1), spatial_shapes,
+                             level_start_index, None) + query
+            
             c_select1, c_select2, c_select3 = c1[:,:H*W*4, :], c1[:, H*W*4:H*W*4+H*W, :], c1[:, H*W*4+H*W:, :]
             c_select1 = F.interpolate(c_select1.permute(0,2,1).reshape(B, C, H*2, W*2), scale_factor=0.5, mode='bilinear', align_corners=False).flatten(2).permute(0,2,1)
             c_select3 = F.interpolate(c_select3.permute(0,2,1).reshape(B, C, H//2, W//2), scale_factor=2, mode='bilinear', align_corners=False).flatten(2).permute(0,2,1)
-            # x = x + c_select1 + c_select2 + c_select3
 
             return query + self.gamma * (c_select1 + c_select2 + c_select3)
         
@@ -496,8 +512,8 @@ class CNN(nn.Module):
 
 
 
-# @MODELS.register_module()
-class DINOComer(nn.Module):
+@MODELS.register_module()
+class DINOAdapterMyself(nn.Module):
     def __init__(self, 
                 model='vit_large_patch16_dinov3_qkvb.sat493m',             # 'vit_7b_patch16_dinov3.sat493m',
                 freeze=True,
@@ -667,7 +683,7 @@ class DINOComer(nn.Module):
     
     
 if __name__ == "__main__":
-    model = DINOComer().cuda()
+    model = DINOAdapterMyself().cuda()
     input = torch.randn(1,3,512,512).cuda()
     output = model(input)
     for o in output:

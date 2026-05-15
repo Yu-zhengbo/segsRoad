@@ -4,15 +4,13 @@ _base_ = [
 ]
 
 
-crop_size = (512, 512)
+crop_size = (560, 560)
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
-    # mean=[123.675, 116.28, 103.53],
-    # std=[58.395, 57.12, 57.375],
-    mean = [109.65, 104.805, 75.48],
-    std = [54.315, 39.78, 36.465],
+    mean=[127.5, 127.5, 127.5],
+    std=[127.5, 127.5, 127.5],
     bgr_to_rgb=True,
     pad_val=0,
     seg_pad_val=255,
@@ -21,27 +19,19 @@ model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
     backbone=dict(
-        type='DinoV3Vit',
-        model = 'vit_large_patch16_dinov3_qkvb.sat493m',
-        # model = 'vit_7b_patch16_dinov3.sat493m',
-        pretrained = True,
-        features_only = True,
-        out_indices = (5, 11, 17, 23),
-        # out_indices = (11,),
-        # out_indices = (23,),
-        freeze = True,
-        use_lora = True,
-        rank = 8,),
+        type='SAM3VitComer',
+        # out_indices = (5, 11, 17, 23),
+        ),
     neck=dict(
         type='DINONeck',
         in_channels=1024,
-        # in_channels = 4096,
         num_in=4,
         upsample='bicubic',
     ),
     decode_head=dict(
         type='UPerHead',
         in_channels=[128, 256, 512, 1024],
+        # in_channels=[1024, 1024, 1024, 1024],
         # in_channels=[512, 1024, 2048, 4096],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
@@ -145,3 +135,7 @@ param_scheduler = [
         by_epoch=False,
     )
 ]
+
+default_hooks = dict(
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+)

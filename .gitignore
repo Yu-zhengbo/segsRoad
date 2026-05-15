@@ -147,3 +147,15 @@ topo_metric/*.json
 topo_metric/*.svg
 
 temp
+
+mmseg/models/backbones/sam3/
+.codex
+#configs/dino
+#condigs/sam
+demo/sam3.ipynb
+setup_env.sh
+!resources/FDMamba.png
+#mmseg/models/backbones/dino*.py
+#mmseg/models/backbones/sam*.py
+#mmseg/models/decode_heads/sam*.py
+

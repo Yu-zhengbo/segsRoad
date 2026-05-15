@@ -1,86 +1,16 @@
-# Mamba Meets Diffusion: SegRoadv3 for Fine-Grained Road Extraction in Remote Sensing Imagery
+# segsRoad: A MMSegmentation-based Codebase for Remote Sensing Road Extraction
 
-Zhengbo Yu, Zhe Chen, binbin Li, RuiTing Hu, Xingyu Bai, Qiaoran He, Li Sun, Zhongchang Sun, Keyan Xiao, Huadong Guo
-<td align="center">Under Review</td>
+## Important Clarification
 
+This repository is a shared MMSegmentation-based codebase for multiple remote sensing road extraction projects. It is not a single-project repository.
 
-## Abstract
-This paper proposes SegRoadv3, a novel road extraction model that integrates state space modeling with diffusion-based generation for remote sensing imagery. Unlike conventional methods that rely on direct pixel-wise classification, SegRoadv3 formulates road extraction as a progressive denoising process, reconstructing complete and coherent road structures from randomly perturbed inputs. The model employs a Deformable State Space backbone (DSMamba) to effectively capture global dependencies and directional continuity in road patterns. In the decoding phase, we introduce a Diagonal Mamba (DiagMamba) module to enhance fine-grained structural representations through multi-step denoising. Additionally, a Pixel Connectivity Structure (PCS) is incorporated as an auxiliary supervision strategy to explicitly improve connectivity in occluded or fragmented regions. Extensive experiments demonstrate that SegRoadv3 achieves new state-of-the-art (SOTA) performance, reaching an IoU of 71.06% on the DeepGlobe dataset and 66.57% on the CHN6-CUG dataset. Moreover, SegRoadv3 significantly enhances the completeness and continuity of road extraction results. To the best of our knowledge, this is the first attempt to integrate Mamba and diffusion mechanisms for road extraction, providing a new paradigm for structure-aware and generative segmentation in remote sensing applications. The corresponding code is publicly available at https://github.com/Yu-zhengbo/segsRoad.
+The manuscript **“FDMamba: Frequency-Enhanced Deformable Mamba for Topology-Aware Road Extraction”** corresponds to the FDMamba implementation in this repository.
 
-![alt text](./resources/segformerv3.png)
-## Installation
+The project **SegRoadv3** is a separate work maintained in the same codebase. Although FDMamba and SegRoadv3 share the same repository infrastructure, dataset preparation tools, and some training utilities, they correspond to different manuscripts and different model designs.
 
-See [MMSegmentation installation instructions](./README_zh-CN.md) and <a href='https://github.com/MzeroMiko/VMamba'>VMmamba installation instructions</a>
+## Project Index
 
-Then 
-````python
-cd mmseg/models/backbones/mamba/damamba/ops_dcnv3
-
-pip install -e .
-
-cd mmseg/models/backbones/mamba/damamba/selective_scan
-
-pip install -e .
-````
-
-
-## Getting Started
-
-
-
-### Training & Evaluation in Command Line
-
-#### Training
-````python
-# Single-GPU training (recommended)
-python tools/train.py configs/segroad/deep_segroadv3.py --amp
-````
-
-
-#### Evaluation
-````python
-python tools/test.py configs/segroad/deep_segroadv3.py /path/to/checkpoint_file
-````
-
-#### Inference with a trained model
-````python
-python demo/image_demo_with_inferencer.py /path/to/image_or_dir/ configs/segroad/deep_segroadv3.py --checkpoint /path/to/checkpoint_file --output-dir /path/to/output_dir
-````
-
-## Datasets Used
-
-This project utilizes two publicly available datasets for training and evaluation. Please refer to the original sources for downloading the data and for more detailed information.
-
-1.  **DeepGlobe Road Dataset**
-    * **Description**: A large-scale dataset for road extraction from high-resolution satellite imagery.
-    * **Homepage**: [http://deepglobe.org/challenge.html](http://deepglobe.org/challenge.html)
-    * **Citation**: 
-        ```
-        Demir, I., Koperski, K., Lindenbaum, D., et al. (2018). Deepglobe 2018: A challenge to parse the earth through satellite images. In Proceedings of the IEEE conference on computer vision and pattern recognition workshops.
-        ```
-
-2.  **CHN6-CUG Road Dataset**
-    * **Description**: A high-resolution road dataset covering various urban and rural scenes in China.
-    * **Homepage**: [https://grzy.cug.edu.cn/zhugiqi/zh_CN/index.htm](https://grzy.cug.edu.cn/zhugiqi/zh_CN/index.htm)
-    * **Citation**: 
-        ```
-        Zhu, Q., Wang, X., Zhang, Y., et al. (2021). A large-scale and high-resolution road dataset for deep learning-based road extraction. Remote Sensing, 13(21), 4447.
-        ```
-
-## Acknowledgements
-
-We extend our sincere gratitude to the creators of the DeepGlobe and CHN6-CUG datasets for making their valuable work publicly available. And this project is developed with reference to MMSegmentation, and VMamba. We would like to express our gratitude to the authors of MMSegmentation, DSMamba and VMamba for their contributions, which served as a valuable foundation and inspiration for our work. If you find this project helpful, please also consider citing or exploring the original repositories.
-
-<!-- ## </a>Citing SegRoadv3
-
-As the paper is under review, we will update the citation information when the paper is accepted.
-```
-Mamba Meets Diffusion: SegRoadv3 for Fine-Grained Road Extraction in Remote Sensing Imagery
-``` -->
-
-
-## License
-
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
-
-This project is licensed under the CC BY 4.0 License. See the `LICENSE` file for details.
+| Project | Description | Documentation |
+|---|---|---|
+| FDMamba | Frequency-enhanced deformable Mamba for topology-aware road extraction | `FDMamba.md` |
+| SegRoadv3 | A separate road extraction project maintained in this shared codebase | `Segroadv3.md` |

@@ -15,8 +15,11 @@ from torch.autograd.function import once_differentiable
 from torch.cuda.amp import custom_bwd, custom_fwd
 import DCNv3
 
-import pkg_resources
-dcn_version = float(pkg_resources.get_distribution('DCNv3').version)
+try:
+    import pkg_resources
+    dcn_version = float(pkg_resources.get_distribution('DCNv3').version)
+except:
+    dcn_version = 1.1  # Default version if not installed as package
 
 
 def _get_reference_points(spatial_shapes, device, kernel_h, kernel_w, dilation_h, dilation_w, pad_h=0, pad_w=0,
