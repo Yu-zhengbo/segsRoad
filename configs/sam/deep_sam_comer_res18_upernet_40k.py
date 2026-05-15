@@ -20,7 +20,7 @@ model = dict(
     data_preprocessor=data_preprocessor,
     backbone=dict(
         type='SAM3VitComer',
-        local_model='res50',
+        local_model='cnn',
         # out_indices = (5, 11, 17, 23),
         ),
     neck=dict(
