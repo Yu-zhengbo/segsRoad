@@ -1,6 +1,6 @@
 # dataset settings
 dataset_type = 'LoveDADataset'
-data_root = 'data/loveDA'
+data_root = '/data/datasets/rs/LoveDA'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -62,5 +62,9 @@ val_dataloader = dict(
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
 
-val_evaluator = dict(type='IoUMetric', iou_metrics=['mIoU'])
+val_evaluator = dict(
+    type='IoUMetric',
+    iou_metrics=['mIoU','mFscore', 'mDice'],
+    metric_items=['mIoU','mFscore', 'mDice']
+)
 test_evaluator = val_evaluator
