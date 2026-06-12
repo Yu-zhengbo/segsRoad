@@ -22,14 +22,22 @@ model = dict(
         type='SAM3Vit',
         ),
     neck=dict(
-        type='DINONeck',
+        type='HFFNeck',
         in_channels=1024,
-        num_in=4,
-        upsample='bicubic',
+        out_channels=1024,
+        num_inputs=4,
+        scale_factors=(4, 2, 1, 0.5),
+        out_channel_mode='uniform', #pyramid
+        use_hli=False, 
+        use_alsp=False,
+        use_rsde=False,
+        use_topdown=True,
+        routing='learnable',
     ),
     decode_head=dict(
         type='UPerHead',
         # in_channels=[128, 256, 512, 1024],
+        # in_channels=[256, 256, 256, 256],
         in_channels=[1024, 1024, 1024, 1024],
         # in_channels=[512, 1024, 2048, 4096],
         in_index=[0, 1, 2, 3],
@@ -136,5 +144,5 @@ param_scheduler = [
 ]
 
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=80000, save_best='mIoU'),
 )

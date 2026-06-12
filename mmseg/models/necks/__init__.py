@@ -6,9 +6,10 @@ from .jpu import JPU
 from .mla_neck import MLANeck
 from .multilevel_neck import MultiLevelNeck
 from .multi_stage_merging import MultiStageMerging
-from .dino import DINONeck
+# from .dino import DINONeck
+from .dino import HFFNeck
 
 __all__ = [
     'FPN', 'MultiLevelNeck', 'MLANeck', 'ICNeck', 'JPU', 'Feature2Pyramid'
-    ,'MultiStageMerging', 'DINONeck'
+    ,'MultiStageMerging',
 ]
