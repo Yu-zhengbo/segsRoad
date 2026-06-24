@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/deepglobe.py',
+    '../_base_/datasets/loveda512.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
@@ -26,41 +26,30 @@ model = dict(
         # model = 'vit_7b_patch16_dinov3.sat493m',
         pretrained = True,
         features_only = True,
-        out_indices = (5, 11, 17, 23),
+        # out_indices = (5, 11, 17, 23),
+        out_indices = (1, 17, 21, 23),
         # out_indices = (11,),
         # out_indices = (23,),
         freeze = True,
         use_lora = False,
         rank = 8,),
-    # neck=dict(
-    #     type='DINONeck',
-    #     in_channels=1024,
-    #     # in_channels = 4096,
-    #     num_in=4,
-    #     upsample='bicubic',
-    # ),
     decode_head=dict(
-        type='UPerHead',
-        # in_channels=[128, 256, 512, 1024],
-        in_channels=[1024, 1024, 1024, 1024],
-        in_index=[0, 1, 2, 3],
-        pool_scales=(1, 2, 3, 6),
-        channels=512,
-        dropout_ratio=0.1,
-        num_classes=2,
+        type='PCADecoder',
+        in_channels=1024,
+        decoder_channels=384,
+        num_layers=4,
+        dropout_ratio=0.,
+        num_classes=7,
         norm_cfg=norm_cfg,
         align_corners=False,
-        loss_decode=dict(
-            type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
-    
-    
-    # neck=dict(
-    #     type='MLANeck',
-    #     in_channels=[1024, 1024, 1024, 1024],
-    #     out_channels=256,
-    #     norm_cfg=norm_cfg,
-    #     act_cfg=dict(type='ReLU'),
-    # ),
+        # loss_decode=dict(
+        #     type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
+        loss_decode=[
+            dict(type='CrossEntropyLoss', loss_name='loss_ce', use_sigmoid=False, loss_weight=1.0),
+            dict(type='DiceLoss', loss_name='loss_dice', loss_weight=1.0)
+        ]),        
+            
+
     # decode_head=dict(
     #     type='SETRMLAHead',
     #     in_channels=(256, 256, 256, 256),

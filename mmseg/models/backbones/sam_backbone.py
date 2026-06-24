@@ -15,35 +15,45 @@ import math
 from mmseg.models.backbones.sam3.sam3.model.vitdet import ViT,get_abs_pos,PatchEmbed
 
 
+REFINED_SAM3_CHECKPOINT_PATH = (
+    "/data/openclaw/UniRefiner/outputs/sam3/checkpoints/model_final.pt"
+)
+
+
 def _load_checkpoint(model, checkpoint_path):
     """Load model checkpoint from file."""
     with g_pathmgr.open(checkpoint_path, "rb") as f:
         ckpt = torch.load(f, map_location="cpu", weights_only=True)
     if "model" in ckpt and isinstance(ckpt["model"], dict):
         ckpt = ckpt["model"]
-    sam3_image_ckpt = {
-        k.replace("detector.", ""): v for k, v in ckpt.items() if "detector" in k
-    }
-    if hasattr(model,'inst_interactive_predictor'):
-        sam3_image_ckpt.update(
-            {
-                k.replace("tracker.", "inst_interactive_predictor.model."): v
-                for k, v in ckpt.items()
-                if "tracker" in k
-            }
-        )
+    has_detector_keys = any("detector" in k for k in ckpt.keys())
+    if has_detector_keys:
+        sam3_image_ckpt = {
+            k.replace("detector.", ""): v for k, v in ckpt.items() if "detector" in k
+        }
+        if hasattr(model,'inst_interactive_predictor'):
+            sam3_image_ckpt.update(
+                {
+                    k.replace("tracker.", "inst_interactive_predictor.model."): v
+                    for k, v in ckpt.items()
+                    if "tracker" in k
+                }
+            )
+    else:
+        sam3_image_ckpt = ckpt
         
     sam3_image_ckpt = {k.replace('backbone.vision_backbone.trunk.',''):v for k,v in sam3_image_ckpt.items()}
     drop_keys = [k for k in sam3_image_ckpt.keys() if k.endswith("freqs_cis")]
     for k in drop_keys:
         sam3_image_ckpt.pop(k)
 
-    missing_keys, _ = model.load_state_dict(sam3_image_ckpt, strict=False)
+    missing_keys, unexpect_keys = model.load_state_dict(sam3_image_ckpt, strict=False)
     if len(missing_keys) > 0:
         print(
             f"loaded {checkpoint_path} and found "
             f"missing and/or unexpected keys:\n{missing_keys=}"
         )
+    print('unexpect_keys length:', len(unexpect_keys))
 
 def get_reference_points(spatial_shapes, device):
     reference_points_list = []
@@ -588,10 +598,14 @@ class SAM3Vit(BaseModule):
                  compile_mode=None,
                  eval_mode=True,
                  checkpoint_path='/home/cz/codes/githubs/sam3/checkpoints/sam3.pt',
+                 refined=False,
                  ):
                  
         super().__init__()
+        if refined:
+            checkpoint_path = REFINED_SAM3_CHECKPOINT_PATH
         self.checkpoint_path = checkpoint_path
+        self.refined = refined
         self.model = ViT(
             img_size=img_size,
             pretrain_img_size=336,
@@ -1222,10 +1236,10 @@ class SAM3VitComer(BaseModule):
     
 if __name__ == "__main__":
     device = torch.device('cuda:0')
-    # model = SAM3Vit(560).to(device)
+    model = SAM3Vit(560).to(device)
     # model = SAM3VitComer(560).to(device)
     # model = SAM3VitUnetAdapter(560).to(device)
-    model = SAM3VitFftAdapter(560).to(device)
+    # model = SAM3VitFftAdapter(560).to(device)
     model.eval()
     input = torch.randn(3,3,560,560).to(device)
     with torch.no_grad():

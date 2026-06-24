@@ -496,7 +496,7 @@ class CNN(nn.Module):
 
 
 
-# @MODELS.register_module()
+@MODELS.register_module()
 class DINOComer(nn.Module):
     def __init__(self, 
                 model='vit_large_patch16_dinov3_qkvb.sat493m',             # 'vit_7b_patch16_dinov3.sat493m',

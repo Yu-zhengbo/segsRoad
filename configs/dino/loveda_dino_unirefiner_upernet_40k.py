@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/deepglobe.py',
+    '../_base_/datasets/loveda512.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
@@ -27,6 +27,7 @@ model = dict(
         pretrained = True,
         features_only = True,
         out_indices = (5, 11, 17, 23),
+        checkpoint='/data/openclaw/UniRefiner/outputs/dinov3/checkpoints/epoch_8.pt',
         # out_indices = (11,),
         # out_indices = (23,),
         freeze = True,
@@ -47,7 +48,7 @@ model = dict(
         pool_scales=(1, 2, 3, 6),
         channels=512,
         dropout_ratio=0.1,
-        num_classes=2,
+        num_classes=7,
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(

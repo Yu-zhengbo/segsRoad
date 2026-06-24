@@ -33,7 +33,7 @@ from .sep_fcn_head import DepthwiseSeparableFCNHead
 from .setr_mla_head import SETRMLAHead
 from .setr_up_head import SETRUPHead
 from .stdc_head import STDCHead
-from .uper_head import UPerHead
+from .uper_head import UPerHead, UPerHeadForDINO
 from .vpd_depth_head import VPDDepthHead
 
 from .deformable_head_with_time import DeformableHeadWithTime
@@ -43,10 +43,10 @@ from .mfa_pcs_uper_head import MFAPCSUPerHead
 from .DenoiseUNet import DenoiseUNet
 from .mkunet_head import MKHead
 from .sam_head import SamHead
-
+from .pca_head import PCADecoder
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
-    'UPerHead', 'DepthwiseSeparableASPPHead', 'ANNHead', 'DAHead', 'OCRHead',
+    'UPerHead', 'UPerHeadForDINO', 'DepthwiseSeparableASPPHead', 'ANNHead', 'DAHead', 'OCRHead',
     'EncHead', 'DepthwiseSeparableFCNHead', 'FPNHead', 'EMAHead', 'DNLHead',
     'PointHead', 'APCHead', 'DMHead', 'LRASPPHead', 'SETRUPHead',
     'SETRMLAHead', 'DPTHead', 'SETRMLAHead', 'SegmenterMaskTransformerHead',
@@ -54,5 +54,5 @@ __all__ = [
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
     'DeformableHeadWithTime','DeformableHeadWithTimeConnect','MFAUPerHead',
-    'MFAPCSUPerHead','DenoiseUNet','MKHead','SamHead'
+    'MFAPCSUPerHead','DenoiseUNet','MKHead','SamHead','PCADecoder'
 ]

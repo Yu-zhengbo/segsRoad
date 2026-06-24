@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/deepglobe.py',
+    '../_base_/datasets/loveda512.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
@@ -40,14 +40,21 @@ model = dict(
     #     upsample='bicubic',
     # ),
     decode_head=dict(
-        type='UPerHead',
+        type='UPerHeadForDINO',
         # in_channels=[128, 256, 512, 1024],
         in_channels=[1024, 1024, 1024, 1024],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
         channels=512,
+        num_upsample_layers=4,
+        use_fpn_concat=True,
+        fpn_concat_se_ratio=16,
+        use_concat=True,
+        concat_se_ratio=16,
+        use_se=True,
+        se_ratio=16,
         dropout_ratio=0.1,
-        num_classes=2,
+        num_classes=7,
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(

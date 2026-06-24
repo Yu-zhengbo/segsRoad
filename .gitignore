@@ -159,3 +159,7 @@ setup_env.sh
 #mmseg/models/backbones/sam*.py
 #mmseg/models/decode_heads/sam*.py
 
+demo/artifact_outputs
+demo/*.md
+demo/*.ipynb
+

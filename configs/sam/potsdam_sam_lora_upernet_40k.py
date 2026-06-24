@@ -1,18 +1,15 @@
 _base_ = [
-    '../_base_/datasets/deepglobe.py',
+    '../_base_/datasets/potsdam.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
-
-crop_size = (512, 512)
+crop_size = (560, 560)
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 data_preprocessor = dict(
     type='SegDataPreProcessor',
-    # mean=[123.675, 116.28, 103.53],
-    # std=[58.395, 57.12, 57.375],
-    mean = [109.65, 104.805, 75.48],
-    std = [54.315, 39.78, 36.465],
+    mean=[127.5, 127.5, 127.5],
+    std=[127.5, 127.5, 127.5],
     bgr_to_rgb=True,
     pad_val=0,
     seg_pad_val=255,
@@ -20,22 +17,20 @@ data_preprocessor = dict(
 model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
+    # backbone=dict(
+    #     type='SAM3Vit',
+    #     ),
     backbone=dict(
-        type='DinoV3Vit',
-        model = 'vit_large_patch16_dinov3_qkvb.sat493m',
-        # model = 'vit_7b_patch16_dinov3.sat493m',
-        pretrained = True,
-        features_only = True,
-        out_indices = (5, 11, 17, 23),
-        # out_indices = (11,),
-        # out_indices = (23,),
-        freeze = True,
-        use_lora = False,
-        rank = 8,),
+        type='SAM3VitLoRA',
+        # img_size=1008,
+        lora_rank=8,
+        lora_alpha=16,
+        lora_dropout=0.0,
+        lora_targets=('q', 'v'),
+    ),
     # neck=dict(
     #     type='DINONeck',
     #     in_channels=1024,
-    #     # in_channels = 4096,
     #     num_in=4,
     #     upsample='bicubic',
     # ),
@@ -43,11 +38,12 @@ model = dict(
         type='UPerHead',
         # in_channels=[128, 256, 512, 1024],
         in_channels=[1024, 1024, 1024, 1024],
+        # in_channels=[512, 1024, 2048, 4096],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
         channels=512,
         dropout_ratio=0.1,
-        num_classes=2,
+        num_classes=6,
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(
@@ -145,7 +141,6 @@ param_scheduler = [
         by_epoch=False,
     )
 ]
-
 
 default_hooks = dict(
     checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=80000, save_best='mIoU'),

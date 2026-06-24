@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/deepglobe.py',
+    '../_base_/datasets/loveda512.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
@@ -47,7 +47,7 @@ model = dict(
         pool_scales=(1, 2, 3, 6),
         channels=512,
         dropout_ratio=0.1,
-        num_classes=2,
+        num_classes=7,
         norm_cfg=norm_cfg,
         align_corners=False,
         loss_decode=dict(

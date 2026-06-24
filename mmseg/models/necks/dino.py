@@ -507,7 +507,7 @@ class HFFNeck(BaseModule):
         # ]
 
         feats = [
-            _pairwise_resize(feat, (int(base_size[0]*2**(2-i)),int(base_size[1]*2**(2-i))), mode=self.upsample_mode)
+            _pairwise_resize(feat, (int(base_size[0]*2**(2-i)),int(base_size[1]*2**(2-i))), mode=self.upsample_mode) if i < 2 else feat
             for i,feat in enumerate(feats)
         ]
 
