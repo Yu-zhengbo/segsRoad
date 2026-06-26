@@ -598,12 +598,13 @@ class SAM3Vit(BaseModule):
                  compile_mode=None,
                  eval_mode=True,
                  checkpoint_path='/home/cz/codes/githubs/sam3/checkpoints/sam3.pt',
+                 refined_weight='',
                  refined=False,
                  ):
                  
         super().__init__()
         if refined:
-            checkpoint_path = REFINED_SAM3_CHECKPOINT_PATH
+            checkpoint_path = refined_weight
         self.checkpoint_path = checkpoint_path
         self.refined = refined
         self.model = ViT(

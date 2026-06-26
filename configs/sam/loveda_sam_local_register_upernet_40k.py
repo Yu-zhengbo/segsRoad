@@ -17,10 +17,19 @@ data_preprocessor = dict(
 model = dict(
     type='EncoderDecoder',
     data_preprocessor=data_preprocessor,
+    # backbone=dict(
+    #     type='SAM3Vit',
+    #     ),
     backbone=dict(
-        type='SAM3Vit',
-        refined=True,
-        refined_weight="/data/openclaw/UniRefiner/outputs/sam3/checkpoints/model_final.pt"
+        # type='SAM3Register',
+        # num_register_tokens=4,
+        # freeze_base=True,
+        type='SAM3WindowRegister',
+        # img_size=1008,
+        # checkpoint_path='/home/cz/codes/githubs/sam3/checkpoints/sam3.pt',
+        num_register_tokens=4,
+        num_local_register_tokens=2,
+        freeze_base=True,
     ),
     decode_head=dict(
         type='UPerHead',

@@ -5,7 +5,11 @@ import torch.utils.checkpoint as checkpoint
 
 from mmseg.registry import MODELS
 from mmseg.models.backbones.sam_backbone import SAM3Vit
-from mmseg.models.backbones.sam3.sam3.model.vitdet import get_abs_pos
+from mmseg.models.backbones.sam3.sam3.model.vitdet import (
+    get_abs_pos,
+    window_partition,
+    window_unpartition,
+)
 
 
 class LoRAQKV(nn.Module):
@@ -373,6 +377,160 @@ class SAM3Register(SAM3Vit):
         # The base class has already loaded checkpoint weights before register
         # tokens are attached. Avoid reloading with the extra parameter present.
         pass
+
+
+@MODELS.register_module()
+class SAM3WindowRegister(SAM3Register):
+    """SAM3Register with extra local register tokens in window attention."""
+
+    def __init__(
+        self,
+        img_size=1008,
+        compile_mode=None,
+        eval_mode=True,
+        checkpoint_path='/home/cz/codes/githubs/sam3/checkpoints/sam3.pt',
+        num_register_tokens=4,
+        num_local_register_tokens=4,
+        freeze_base=True,
+    ):
+        if num_local_register_tokens <= 0:
+            raise ValueError('num_local_register_tokens must be positive.')
+
+        self.num_local_register_tokens = num_local_register_tokens
+        super().__init__(
+            img_size=img_size,
+            compile_mode=compile_mode,
+            eval_mode=eval_mode,
+            checkpoint_path=checkpoint_path,
+            num_register_tokens=num_register_tokens,
+            freeze_base=freeze_base,
+        )
+
+        embed_dim = self.model.patch_embed.proj.out_channels
+        self.local_register_tokens = nn.Parameter(
+            torch.zeros(
+                len(self.model.blocks), 1, num_local_register_tokens,
+                embed_dim))
+        nn.init.trunc_normal_(self.local_register_tokens, std=0.02)
+        self.freeze_model()
+
+    def _forward_window_block_with_registers(self, block, block_index, x):
+        shortcut = x
+        x = block.norm1(x)
+        h, w = x.shape[1], x.shape[2]
+        window_size = block.window_size
+        windows, pad_hw = window_partition(x, window_size)
+
+        num_windows, _, _, dim = windows.shape
+        num_patch_tokens = window_size * window_size
+        patch_tokens = windows.reshape(num_windows, num_patch_tokens, dim)
+        local_registers = self.local_register_tokens[block_index].expand(
+            num_windows, -1, -1)
+        tokens = torch.cat([patch_tokens, local_registers], dim=1)
+
+        attn = block.attn
+        if attn.use_rel_pos:
+            raise NotImplementedError(
+                'SAM3WindowRegister does not support relative position '
+                'attention with local register tokens.')
+
+        qkv = attn.qkv(tokens).reshape(
+            num_windows,
+            num_patch_tokens + self.num_local_register_tokens,
+            3,
+            attn.num_heads,
+            -1,
+        )
+        q, k, v = qkv.permute(2, 0, 3, 1, 4).unbind(0)
+
+        q_patch, k_patch = attn._apply_rope(
+            q[:, :, :num_patch_tokens],
+            k[:, :, :num_patch_tokens],
+        )
+        q = torch.cat([q_patch, q[:, :, num_patch_tokens:]], dim=2)
+        k = torch.cat([k_patch, k[:, :, num_patch_tokens:]], dim=2)
+
+        tokens = torch.nn.functional.scaled_dot_product_attention(q, k, v)
+        tokens = tokens.view(
+            num_windows,
+            attn.num_heads,
+            num_patch_tokens + self.num_local_register_tokens,
+            -1,
+        )
+        tokens = tokens.permute(0, 2, 1, 3).reshape(
+            num_windows,
+            num_patch_tokens + self.num_local_register_tokens,
+            dim,
+        )
+        tokens = attn.proj(tokens)
+
+        patch_tokens = tokens[:, :num_patch_tokens]
+        windows = patch_tokens.reshape(num_windows, window_size, window_size, dim)
+        x = window_unpartition(windows, window_size, pad_hw, (h, w))
+
+        x = shortcut + block.dropout(block.drop_path(block.ls1(x)))
+        x = x + block.dropout(block.drop_path(block.ls2(block.mlp(block.norm2(x)))))
+        return x
+
+    def forward(self, image):
+        x = self.model.patch_embed(image)
+        bs, h, w, _ = x.shape
+
+        if self.model.pos_embed is not None:
+            x = x + get_abs_pos(
+                self.model.pos_embed,
+                self.model.pretrain_use_cls_token,
+                (h, w),
+                self.model.retain_cls_token,
+                tiling=self.model.tile_abs_pos,
+            )
+
+        x = self.model.ln_pre(x)
+        registers = self.register_tokens.expand(bs, -1, -1)
+
+        outputs = []
+        for i, block in enumerate(self.model.blocks):
+            if block.window_size > 0:
+                if self.model.use_act_checkpoint and self.model.training:
+                    x = checkpoint.checkpoint(
+                        lambda x_: self._forward_window_block_with_registers(
+                            block, i, x_),
+                        x,
+                        use_reentrant=False,
+                    )
+                else:
+                    x = self._forward_window_block_with_registers(block, i, x)
+                registers = self._forward_registers_mlp(block, registers)
+            else:
+                if self.model.use_act_checkpoint and self.model.training:
+                    x, registers = checkpoint.checkpoint(
+                        lambda x_, registers_: (
+                            self._forward_global_block_with_registers(
+                                block, x_, registers_)
+                        ),
+                        x,
+                        registers,
+                        use_reentrant=False,
+                    )
+                else:
+                    x, registers = self._forward_global_block_with_registers(
+                        block, x, registers)
+
+            if (i == self.model.full_attn_ids[-1]) or (
+                self.model.return_interm_layers
+                and i in self.model.full_attn_ids
+            ):
+                feats = self.model.ln_post(
+                    x) if i == self.model.full_attn_ids[-1] else x
+                feats = feats.permute(0, 3, 1, 2)
+                outputs.append(feats)
+
+        return outputs
+
+    def freeze_model(self):
+        super().freeze_model()
+        if hasattr(self, 'local_register_tokens'):
+            self.local_register_tokens.requires_grad = True
 
 
 def _linear_flops(batch_tokens, in_features, out_features):

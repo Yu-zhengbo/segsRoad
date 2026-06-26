@@ -3,9 +3,9 @@ _base_ = [
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
-custom_imports = dict(
-    imports=['mmseg.models.backbones.dino'],
-    allow_failed_imports=False)
+# custom_imports = dict(
+#     imports=['mmseg.models.backbones.dino'],
+#     allow_failed_imports=False)
 
 
 crop_size = (512, 512)

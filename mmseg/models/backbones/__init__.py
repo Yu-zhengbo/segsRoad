@@ -48,10 +48,10 @@ try:
     from .sam import SAM3
     from .sam_myself import SAM3Myself
     from .sam_backbone import SAM3Vit, SAM3VitComer
-    from .sam_finetune import SAM3Register, SAM3VitLoRA
+    from .sam_finetune import SAM3Register, SAM3VitLoRA, SAM3WindowRegister
     _sam_backbones = [
         'SAM3', 'SAM3Myself', 'SAM3Vit', 'SAM3VitComer',
-        'SAM3VitLoRA', 'SAM3Register'
+        'SAM3VitLoRA', 'SAM3Register', 'SAM3WindowRegister'
     ]
 except ModuleNotFoundError as e:
     if e.name != 'sam3':
