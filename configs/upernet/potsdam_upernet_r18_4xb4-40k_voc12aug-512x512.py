@@ -21,3 +21,6 @@ model = dict(
     backbone=dict(depth=18),
     decode_head=dict(in_channels=[64, 128, 256, 512], num_classes=6),
     auxiliary_head=dict(in_channels=256, num_classes=6))
+
+default_hooks = dict(
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000,save_best='mIoU'),)

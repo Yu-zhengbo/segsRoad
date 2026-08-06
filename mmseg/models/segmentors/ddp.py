@@ -155,7 +155,7 @@ class DDP(EncoderDecoder):
     def encode_decode(self, img, img_metas):
         """Encode images with backbone and decode into a semantic segmentation
         map of the same size as input."""
-        print(img_metas)
+        # print(img_metas)
         x = self.extract_feat(img)[0]
         if self.diffusion == "ddim":
             out = self.ddim_sample(x, img_metas)
@@ -169,9 +169,6 @@ class DDP(EncoderDecoder):
             mode='bilinear',
             align_corners=self.align_corners)
         return out
-
-
-
 
     def loss(self, img, img_metas: SampleList) -> dict:
         """Forward function for training.

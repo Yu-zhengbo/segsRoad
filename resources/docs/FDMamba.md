@@ -7,7 +7,7 @@ This document provides the project-specific instructions for **FDMamba**, corres
 FDMamba is implemented in the shared `segsRoad` repository, which is a MMSegmentation-based codebase for remote sensing road extraction. This file is intended to clearly distinguish FDMamba from other projects maintained in the same repository, such as SegRoadv3.
 
 <p align="center">
-  <img src="./resources/FDMamba.png" alt="FDMamba" width="80%" />
+  <img src="../FDMamba.png" alt="FDMamba" width="80%" />
 </p>
 
 <p align="center">
@@ -262,7 +262,7 @@ mmseg/
         └── ... PCS loss if implemented here ...
 
 docs/
-└── FDMamba.md
+└── resources/docs/FDMamba.md
 ```
 
 The exact source-code locations may vary depending on how the shared repository is organized, but the FDMamba-specific configs should always be placed under `configs/fdmamba/`.

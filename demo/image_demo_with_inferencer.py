@@ -2,7 +2,22 @@
 from argparse import ArgumentParser
 
 from mmseg.apis import MMSegInferencer
+from mmengine.config import Config
 import os
+
+def remove_load_annotations(pipeline):
+    for transform in pipeline:
+        if transform.get('type') == 'TestTimeAug':
+            tta_transforms = []
+            for transforms in transform['transforms']:
+                filtered_transforms = [
+                    aug for aug in transforms
+                    if aug.get('type') != 'LoadAnnotations'
+                ]
+                if filtered_transforms:
+                    tta_transforms.append(filtered_transforms)
+            transform['transforms'] = tta_transforms
+    return pipeline
 
 def main():
     parser = ArgumentParser()
@@ -32,11 +47,22 @@ def main():
         action='store_true',
         default=False,
         help='Whether to display the class labels.')
+    parser.add_argument(
+        '--tta', action='store_true', help='Test time augmentation')
     args = parser.parse_args()
+
+    model = args.model
+    if args.tta:
+        cfg = Config.fromfile(args.model)
+        cfg.test_dataloader.dataset.pipeline = remove_load_annotations(
+            cfg.tta_pipeline)
+        cfg.tta_model.module = cfg.model
+        cfg.model = cfg.tta_model
+        model = cfg
 
     # build the model from a config file and a checkpoint file
     mmseg_inferencer = MMSegInferencer(
-        args.model,
+        model,
         args.checkpoint,
         dataset_name=args.dataset_name,
         device=args.device)

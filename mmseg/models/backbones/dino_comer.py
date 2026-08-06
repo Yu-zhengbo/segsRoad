@@ -12,6 +12,7 @@ import timm
 from timm.models.layers import trunc_normal_
 from torch.nn.init import normal_
 import math
+from mmseg.models.backbones.dino import DinoV3Vit
 
 def get_reference_points(spatial_shapes, device):
     reference_points_list = []
@@ -496,8 +497,8 @@ class CNN(nn.Module):
 
 
 
-# @MODELS.register_module()
-class DINOComer(nn.Module):
+@MODELS.register_module()
+class DINOComer(DinoV3Vit):
     def __init__(self, 
                 model='vit_large_patch16_dinov3_qkvb.sat493m',             # 'vit_7b_patch16_dinov3.sat493m',
                 freeze=True,
@@ -522,19 +523,14 @@ class DINOComer(nn.Module):
                 norm_layer = partial(nn.LayerNorm, eps=1e-6),
                 *args, **kwargs):
         
-        super().__init__()
-        
-        self.eva = timm.create_model(
-            model,
-            pretrained=True,
+        super().__init__(
+            model=model,
+            pretrained=True if pretrained is None else pretrained,
             features_only=True,
-        ).model
-        
-        self.freeze_backbone = freeze
-        if freeze:
-            for param in self.eva.parameters():
-                param.requires_grad = False
-            self.eva.eval()
+            freeze=freeze,
+            use_lora=False,
+        )
+        self.eva = self.dinov3.model
         
         self.cls_token = None
         self.pretrain_size = (pretrain_size, pretrain_size)

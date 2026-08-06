@@ -29,7 +29,7 @@ model = dict(
     ),
     decode_head=dict(
         type='UPerHead',
-        in_channels=[128, 256, 512, 1024],
+        in_channels=[1024, 1024, 1024, 1024],
         # in_channels=[512, 1024, 2048, 4096],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
@@ -135,5 +135,5 @@ param_scheduler = [
 ]
 
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000,save_best='mIoU'),
 )

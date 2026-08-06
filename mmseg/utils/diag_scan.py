@@ -135,6 +135,91 @@ class FastDiagScan(nn.Module):
         return x.scatter(2, index_map[None, None, :].expand(B, C, -1), y)#.view(B, C, self.H, self.W)
 
 
+class FastDirectionalScan(nn.Module):
+    """Gather/scatter indices for eight complementary 2D scan directions.
+
+    The forward set is ``(h_lr, diag_ur, v_tb, diag_dr)`` and the reverse
+    set is its exact sequence-wise inverse ``(h_rl, diag_dl, v_bt, diag_ul)``.
+    Every index visits each spatial position exactly once.
+    """
+
+    def __init__(self, H, W):
+        super().__init__()
+        self.H, self.W = H, W
+
+        h_lr = self._horizontal_index(H, W)
+        v_tb = self._vertical_index(H, W)
+        diag_ur = self._diag_up_right_index(H, W)
+        diag_dr = self._diag_down_right_index(H, W)
+
+        indices = dict(
+            h_lr=h_lr,
+            h_rl=torch.flip(h_lr, dims=[0]),
+            v_tb=v_tb,
+            v_bt=torch.flip(v_tb, dims=[0]),
+            diag_ur=diag_ur,
+            diag_dl=torch.flip(diag_ur, dims=[0]),
+            diag_dr=diag_dr,
+            diag_ul=torch.flip(diag_dr, dims=[0]),
+        )
+        for name, index in indices.items():
+            self.register_buffer(f'{name}_index', index)
+
+    @staticmethod
+    def _horizontal_index(H, W):
+        return torch.arange(H * W, dtype=torch.long)
+
+    @staticmethod
+    def _vertical_index(H, W):
+        return torch.arange(H * W, dtype=torch.long).reshape(H, W).t().reshape(-1)
+
+    @staticmethod
+    def _diag_up_right_index(H, W):
+        """Scan every / diagonal from lower-left towards upper-right."""
+        grid = torch.arange(H * W, dtype=torch.long).reshape(H, W)
+        index = []
+        for col in range(W):
+            row, cur_col = H - 1, col
+            while row >= 0 and cur_col < W:
+                index.append(grid[row, cur_col])
+                row, cur_col = row - 1, cur_col + 1
+        for start_row in range(H - 2, -1, -1):
+            row, cur_col = start_row, 0
+            while row >= 0 and cur_col < W:
+                index.append(grid[row, cur_col])
+                row, cur_col = row - 1, cur_col + 1
+        return torch.stack(index)
+
+    @staticmethod
+    def _diag_down_right_index(H, W):
+        """Scan every \\ diagonal from upper-left towards lower-right."""
+        grid = torch.arange(H * W, dtype=torch.long).reshape(H, W)
+        index = []
+        for col in range(W):
+            row, cur_col = 0, col
+            while row < H and cur_col < W:
+                index.append(grid[row, cur_col])
+                row, cur_col = row + 1, cur_col + 1
+        for start_row in range(1, H):
+            row, cur_col = start_row, 0
+            while row < H and cur_col < W:
+                index.append(grid[row, cur_col])
+                row, cur_col = row + 1, cur_col + 1
+        return torch.stack(index)
+
+    def scan(self, x, direction):
+        B, C, _, _ = x.shape
+        index = getattr(self, f'{direction}_index')
+        x = x.flatten(2)
+        return torch.gather(x, 2, index[None, None, :].expand(B, C, -1))
+
+    def recover(self, y, direction):
+        B, C, _ = y.shape
+        index = getattr(self, f'{direction}_index')
+        x = y.new_zeros(B, C, self.H * self.W)
+        return x.scatter(2, index[None, None, :].expand(B, C, -1), y)
+
+
 
 if __name__ == "__main__":
     B, C, H, W = 6, 256, 128, 128

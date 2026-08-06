@@ -97,10 +97,12 @@ class DeformableHeadWithTimeConnect(BaseDecodeHead):
                  num_feature_levels,
                  encoder,
                  positional_encoding,
+                 use_mamba=False,
                  **kwargs):
         
         super().__init__(input_transform='multiple_select', **kwargs)
-    
+
+        self.use_mamba = use_mamba
         self.num_feature_levels = num_feature_levels
         self.encoder = build_transformer_layer_sequence(encoder)
         self.positional_encoding = build_positional_encoding(
@@ -128,6 +130,9 @@ class DeformableHeadWithTimeConnect(BaseDecodeHead):
         # self.level_embeds = nn.Parameter(
         #     torch.Tensor(self.num_feature_levels, self.embed_dims))
         self.con_loss = nn.BCEWithLogitsLoss()
+        
+        
+        
         self.init_weights()
     
     def init_weights(self):
@@ -174,40 +179,44 @@ class DeformableHeadWithTimeConnect(BaseDecodeHead):
         reference_points = reference_points[:, :, None]
         return reference_points
     
+    def forward(self, inputs, times):
+        if self.use_mamba:
+            return self.forward_mamba(inputs, times)
+        return self.forward_msa(inputs, times)
 
-    # def forward(self, inputs, times):
+    def forward_mamba(self, inputs, times):
         
-    #     mlvl_feats = inputs[-self.num_feature_levels:]
+        mlvl_feats = inputs[-self.num_feature_levels:]
         
-    #     feat_flatten = []
-    #     lvl_pos_embed_flatten = []
-    #     spatial_shapes = []
-    #     for lvl, feat in enumerate(mlvl_feats):
-    #         bs, c, h, w = feat.shape
-    #         spatial_shape = (h, w)
-    #         spatial_shapes.append(spatial_shape)
-    #         mask = torch.zeros((bs, h, w), device=feat.device, requires_grad=False)
-    #         pos_embed = self.positional_encoding(mask)   #得到位置编码 B,256,128,128
-    #         lvl_pos_embed = pos_embed
-    #         lvl_pos_embed_flatten.append(lvl_pos_embed)
-    #         feat_flatten.append(feat)
-    #     feat_flatten = torch.cat(feat_flatten, 1)
-    #     lvl_pos_embed_flatten = torch.cat(lvl_pos_embed_flatten, 1)
+        feat_flatten = []
+        lvl_pos_embed_flatten = []
+        spatial_shapes = []
+        for lvl, feat in enumerate(mlvl_feats):
+            bs, c, h, w = feat.shape
+            spatial_shape = (h, w)
+            spatial_shapes.append(spatial_shape)
+            mask = torch.zeros((bs, h, w), device=feat.device, requires_grad=False)
+            pos_embed = self.positional_encoding(mask)   #得到位置编码 B,256,128,128
+            lvl_pos_embed = pos_embed
+            lvl_pos_embed_flatten.append(lvl_pos_embed)
+            feat_flatten.append(feat)
+        feat_flatten = torch.cat(feat_flatten, 1)
+        lvl_pos_embed_flatten = torch.cat(lvl_pos_embed_flatten, 1)
        
-    #     memory = self.encoder(
-    #         query=feat_flatten,
-    #         time=times,
-    #         query_pos=lvl_pos_embed_flatten,)
+        memory = self.encoder(
+            query=feat_flatten,
+            time=times,
+            query_pos=lvl_pos_embed_flatten,)
 
-    #     out = self.conv_seg(memory)
+        out = self.conv_seg(memory)
 
-    #     con0 = self.connect_d0(memory)
-    #     con1 = self.connect_d1(memory)
+        con0 = self.connect_d0(memory)
+        con1 = self.connect_d1(memory)
 
-    #     return out,con0,con1
+        return out,con0,con1
 
     # @auto_fp16()
-    def forward(self, inputs, times):
+    def forward_msa(self, inputs, times):
         
         mlvl_feats = inputs[-self.num_feature_levels:]
         

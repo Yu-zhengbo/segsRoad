@@ -148,6 +148,8 @@ topo_metric/*.svg
 
 temp
 
+paper_drafts/
+
 mmseg/models/backbones/sam3/
 .codex
 #configs/dino
@@ -155,7 +157,48 @@ mmseg/models/backbones/sam3/
 demo/sam3.ipynb
 setup_env.sh
 !resources/FDMamba.png
+!resources/GeoFAD-SAM.png
 #mmseg/models/backbones/dino*.py
 #mmseg/models/backbones/sam*.py
 #mmseg/models/decode_heads/sam*.py
 
+demo/artifact_outputs
+demo/*.md
+demo/*.ipynb
+
+# Paper staging: keep the main GeoFAD configs visible, hide scratch/baseline
+# configs that should not enter the first reproducibility commit.
+configs/lovedaSam/*
+!configs/lovedaSam/loveda_GeoFAD_20k.py
+configs/Samvaihingen/*
+!configs/Samvaihingen/vaihingen_GeoFAD_20k.py
+configs/Sampostdam/*
+!configs/Sampostdam/potsdam_GeoFAD_20k.py
+configs/Samchn6/*
+!configs/Samchn6/chn6_GeoFAD_20k.py
+
+configs/coanet/
+configs/_base_/schedules/schedule_10k.py
+configs/mask2former/loveda_*.py
+configs/poolformer/loveda_*.py
+configs/segformer/loveda_*.py
+configs/vit/loveda_*.py
+configs/dino/*_concat_mfca_dypcahead_40k.py
+configs/sam/*_concat_mfca_dypcahead_40k*.py
+configs/sam/*_adapter_*_upernet_40k.py
+configs/sam/*_lora_upernet_40k.py
+configs/sam/*_refine*_upernet_40k.py
+configs/sam/*_dyshufflehead_40k.py
+configs/sam/*_mfca_dypcahead_40k.py
+configs/sam/*_local_pcahead.py
+
+# Local paper analysis helpers. Commit them explicitly with `git add -f` if
+# they become part of the released reproduction package.
+demo/color_mask_to_label.py
+tools/analysis_tools/feature_visualization_server.py
+tools/analysis_tools/filter_low_miou_samples.py
+tools/analysis_tools/select_paper_cases.py
+tools/analysis_tools/stat_loveda_backbone_norms.py
+tools/analysis_tools/visualize_model_features.py
+topo_metric/select_visual_cases.py
+topo_metric/visualize_road_graph.py

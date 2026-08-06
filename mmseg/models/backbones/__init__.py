@@ -39,14 +39,30 @@ from .diagmamba import DualDiagMamba_base
 from .cross_damamba import CrossDAMamba_tiny, CrossDAMamba_small, CrossDAMamba_base
 from .dcan import DCAN_Tiny, DCAN_Small, DCAN_Base
 from .mkunet import MKUNet
-from .dino import DinoV3Vit
+from .dino import DINO3Register, DinoV3Vit
 from .dino_adapter import DINOAdapter
 from .dino_comer import DINOComer
+from .dino_refined_register_comer import DINOv3RefinedRegisterComer
 from .dino_myself import DINOAdapterMyself
 from .dino_myself_v2 import DINOAdapterMyselfv2
-from .sam import SAM3
-from .sam_myself import SAM3Myself
-from .sam_backbone import SAM3Vit, SAM3VitComer
+try:
+    from .sam import SAM3
+    from .sam_myself import SAM3Myself
+    from .sam_backbone import (
+        SAM3Vit, SAM3VitComer, SAM3VitFftAdapter, SAM3VitUnetAdapter)
+    from .sam_finetune import SAM3Register, SAM3VitLoRA, SAM3WindowRegister
+    from .sam_refined_window_register_comer import (
+        SAM3RefinedWindowRegisterComer)
+    _sam_backbones = [
+        'SAM3', 'SAM3Myself', 'SAM3Vit', 'SAM3VitComer',
+        'SAM3VitFftAdapter', 'SAM3VitLoRA', 'SAM3Register',
+        'SAM3RefinedWindowRegisterComer', 'SAM3VitUnetAdapter',
+        'SAM3WindowRegister'
+    ]
+except ModuleNotFoundError as e:
+    if e.name != 'sam3':
+        raise
+    _sam_backbones = []
 # , DINOComer
 __all__ = [
     'ResNet', 'ResNetV1c', 'ResNetV1d', 'ResNeXt', 'HRNet', 'FastSCNN',
@@ -59,7 +75,6 @@ __all__ = [
     'DeformableVMAMBA', 'DeformableAggregateVMAMBA', 'Backbone_SpatialMamba',
     'DualMamba_base', 'DualMamba_small', 'DualMamba_tiny', 'DualDiagMamba_base',
     'CrossDAMamba_tiny', 'CrossDAMamba_small', 'CrossDAMamba_base',
-    'DCAN_Tiny', 'DCAN_Small', 'DCAN_Base', 'MKUNet','DinoV3Vit', 'DINOAdapter',
-    'DINOComer','DINOAdapterMyself','DINOAdapterMyselfv2', 'SAM3', 'SAM3Myself',
-    'SAM3Vit','SAM3VitComer'
-]
+    'DCAN_Tiny', 'DCAN_Small', 'DCAN_Base', 'MKUNet','DinoV3Vit', 'DINO3Register', 'DINOAdapter',
+    'DINOComer','DINOv3RefinedRegisterComer','DINOAdapterMyself','DINOAdapterMyselfv2'
+] + _sam_backbones

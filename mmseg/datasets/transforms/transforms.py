@@ -1001,7 +1001,9 @@ class RandomFlip(MMCV_RandomFlip):
     Args:
         prob (float | list[float], optional): The flipping probability.
             Defaults to None.
-        direction(str | list[str]): The flipping direction. Options
+        direction(str | list[str]): The flipping direction. Options are
+            ``'horizontal'``, ``'vertical'`` and ``'diagonal'``. A diagonal
+            flip applies both horizontal and vertical flips.
             If input is a list, the length must equal ``prob``. Each
             element in ``prob`` indicates the flip probability of
             corresponding direction. Defaults to 'horizontal'.

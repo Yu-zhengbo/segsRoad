@@ -71,12 +71,12 @@ model = dict(
         type='SAM3VitComer',
         # out_indices = (5, 11, 17, 23),
         ),
-    neck=dict(
-        type='DINONeck',
-        in_channels=1024,
-        num_in=4,
-        upsample='bicubic',
-    ),
+    # neck=dict(
+    #     type='DINONeck',
+    #     in_channels=1024,
+    #     num_in=4,
+    #     upsample='bicubic',
+    # ),
     decode_head=dict(
         type='Mask2FormerHead',
         in_channels=[1024, 1024, 1024, 1024],

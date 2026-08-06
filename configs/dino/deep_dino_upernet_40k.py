@@ -30,19 +30,19 @@ model = dict(
         # out_indices = (11,),
         # out_indices = (23,),
         freeze = True,
-        use_lora = True,
+        use_lora = False,
         rank = 8,),
-    neck=dict(
-        type='DINONeck',
-        in_channels=1024,
-        # in_channels = 4096,
-        num_in=4,
-        upsample='bicubic',
-    ),
+    # neck=dict(
+    #     type='DINONeck',
+    #     in_channels=1024,
+    #     # in_channels = 4096,
+    #     num_in=4,
+    #     upsample='bicubic',
+    # ),
     decode_head=dict(
         type='UPerHead',
-        in_channels=[128, 256, 512, 1024],
-        # in_channels=[512, 1024, 2048, 4096],
+        # in_channels=[128, 256, 512, 1024],
+        in_channels=[1024, 1024, 1024, 1024],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
         channels=512,
@@ -148,5 +148,5 @@ param_scheduler = [
 
 
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=80000, save_best='mIoU'),
 )

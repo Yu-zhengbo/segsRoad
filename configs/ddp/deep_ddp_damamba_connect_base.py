@@ -27,7 +27,7 @@ model = dict(
     accumulation=True,
     pretrained=None,
     backbone=dict(
-        pretrained='/home/cz/datasets/segsroad_model_weights/DAMamba-B.pth',
+        pretrained='/data1/datasets/zhengbo/segsroad_model_weights/DAMamba-B.pth',
         type='DAMamba_base',
     ),
     neck=[
@@ -130,5 +130,5 @@ param_scheduler = [
     )
 ]
 train_dataloader = dict(batch_size=6, num_workers=6)
-val_dataloader = dict(batch_size=1, num_workers=1)
+val_dataloader = dict(batch_size=6, num_workers=6)
 test_dataloader = val_dataloader

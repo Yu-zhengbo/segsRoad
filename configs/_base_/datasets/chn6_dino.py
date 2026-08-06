@@ -1,6 +1,6 @@
 # dataset settings
-dataset_type = 'PotsdamDataset'
-data_root = '/data/datasets/Vaihingen'
+dataset_type = 'RoadDataset'
+data_root = '/data1/datasets/zhengbo/roaddataset/chn6'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -8,34 +8,64 @@ train_pipeline = [
     dict(
         type='RandomResize',
         scale=(512, 512),
-        ratio_range=(0.5, 2.0),
+        ratio_range=(0.75, 1.5),
         keep_ratio=True),
-    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
-    dict(type='RandomFlip', prob=0.5),
+    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.95),
+    # dict(type='RandomFlip', prob=0.5),
+    dict(
+        type='RandomFlip',
+        prob=0.5,
+        direction='horizontal'),
+    dict(
+        type='RandomFlip',
+        prob=0.5,
+        direction='vertical'),
+    # dict(
+    #     type='RandomRotate',
+    #     prob=0.5,
+    #     degree=30,
+    #     pad_val=0,
+    #     seg_pad_val=255),
+    # dict(
+    #     type='RandomChoice',
+    #     transforms=[
+    #         [dict(type='RandomRotate', prob=1.0, degree=(0, 0),
+    #             pad_val=0, seg_pad_val=255)],
+    #         [dict(type='RandomRotate', prob=1.0, degree=(90, 90),
+    #             pad_val=0, seg_pad_val=255)],
+    #         [dict(type='RandomRotate', prob=1.0, degree=(180, 180),
+    #             pad_val=0, seg_pad_val=255)],
+    #         [dict(type='RandomRotate', prob=1.0, degree=(270, 270),
+    #             pad_val=0, seg_pad_val=255)],
+    #     ]
+    # ),
     dict(type='PhotoMetricDistortion'),
     dict(type='PackSegInputs')
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(1024, 1024), keep_ratio=True),
+    dict(type='Resize', scale=(512, 512), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
     dict(type='LoadAnnotations', reduce_zero_label=False),
     dict(type='PackSegInputs')
 ]
-img_ratios = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
+
+
+
 tta_pipeline = [
     dict(type='LoadImageFromFile', backend_args=None),
     dict(
         type='TestTimeAug',
         transforms=[
             [
-                dict(type='Resize', scale_factor=r, keep_ratio=True)
-                for r in img_ratios
+                dict(type='Resize', scale=(512, 512), keep_ratio=True)
             ],
             [
                 dict(type='RandomFlip', prob=0., direction='horizontal'),
-                dict(type='RandomFlip', prob=1., direction='horizontal')
+                dict(type='RandomFlip', prob=1., direction='horizontal'),
+                dict(type='RandomFlip', prob=1., direction='vertical'),
+                dict(type='RandomFlip', prob=1., direction='diagonal')
             ], [dict(type='LoadAnnotations')], [dict(type='PackSegInputs')]
         ])
 ]
@@ -52,7 +82,7 @@ train_dataloader = dict(
         pipeline=train_pipeline))
 val_dataloader = dict(
     batch_size=1,
-    num_workers=1,
+    num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
@@ -60,20 +90,23 @@ val_dataloader = dict(
         data_root=data_root,
         data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
         pipeline=test_pipeline))
+# test_dataloader = val_dataloader
 test_dataloader = dict(
     batch_size=1,
-    num_workers=1,
+    num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
-        data_prefix=dict(img_path='images/test', seg_map_path='annotations/test'),
+        data_prefix=dict(img_path='low_iou_datas/images', seg_map_path='low_iou_datas/annotations'),
         pipeline=test_pipeline))
-        
+
+
 val_evaluator = dict(
     type='IoUMetric',
     iou_metrics=['mIoU','mFscore', 'mDice'],
     metric_items=['mIoU','mFscore', 'mDice']
 )
+
 test_evaluator = val_evaluator

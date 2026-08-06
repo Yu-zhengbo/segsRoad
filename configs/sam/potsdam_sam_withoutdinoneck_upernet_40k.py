@@ -3,7 +3,6 @@ _base_ = [
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
-
 crop_size = (560, 560)
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
@@ -136,5 +135,5 @@ param_scheduler = [
 ]
 
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=80000, save_best='mIoU'),
 )

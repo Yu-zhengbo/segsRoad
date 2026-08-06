@@ -12,7 +12,7 @@ for file in ./target/deepglobe/*.p; do
 done
 
 # source directory
-dir=output/deepglobe/fcn_direction
+dir=output/deepglobe/segroadv3
 
 # source directory
 # dir=$1

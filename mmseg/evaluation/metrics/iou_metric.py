@@ -41,6 +41,11 @@ class IoUMetric(BaseMetric):
             names to disambiguate homonymous metrics of different evaluators.
             If prefix is not provided in the argument, self.default_prefix
             will be used instead. Defaults to None.
+        selected_classes (Sequence[str], optional): Class names whose IoUs
+            are averaged into an additional metric. Defaults to None, which
+            disables the additional metric.
+        selected_metric_name (str): Name of the additional subset mIoU
+            metric. Defaults to 'selected_mIoU'.
     """
 
     def __init__(self,
@@ -52,6 +57,8 @@ class IoUMetric(BaseMetric):
                  output_dir: Optional[str] = None,
                  format_only: bool = False,
                  prefix: Optional[str] = None,
+                 selected_classes: Optional[Sequence[str]] = None,
+                 selected_metric_name: str = 'selected_mIoU',
                  **kwargs) -> None:
         super().__init__(collect_device=collect_device, prefix=prefix)
 
@@ -60,6 +67,8 @@ class IoUMetric(BaseMetric):
         self.nan_to_num = nan_to_num
         self.beta = beta
         self.output_dir = output_dir
+        self.selected_classes = selected_classes
+        self.selected_metric_name = selected_metric_name
         if self.output_dir and is_main_process():
             mkdir_or_exist(self.output_dir)
         self.format_only = format_only
@@ -131,6 +140,29 @@ class IoUMetric(BaseMetric):
 
         class_names = self.dataset_meta['classes']
 
+        # Besides the mIoU over every dataset class, optionally report the
+        # mean IoU over a named subset of classes.  This is useful when a
+        # dataset contains auxiliary classes (for example ``clutter``) that
+        # should not affect a task-specific score.
+        selected_miou = None
+        if self.selected_classes is not None:
+            if 'IoU' not in ret_metrics:
+                raise ValueError(
+                    'selected_classes requires "mIoU" in iou_metrics.')
+            unknown_classes = set(self.selected_classes) - set(class_names)
+            if unknown_classes:
+                raise ValueError(
+                    f'selected_classes contains unknown dataset classes: '
+                    f'{sorted(unknown_classes)}. Available classes: '
+                    f'{list(class_names)}')
+            selected_indices = [
+                class_names.index(class_name)
+                for class_name in self.selected_classes
+            ]
+            selected_miou = round(
+                float(np.nanmean(ret_metrics['IoU'][selected_indices]) * 100),
+                2)
+
         # summary table
         ret_metrics_summary = OrderedDict({
             ret_metric: np.round(np.nanmean(ret_metric_value) * 100, 2)
@@ -142,6 +174,8 @@ class IoUMetric(BaseMetric):
                 metrics[key] = val
             else:
                 metrics['m' + key] = val
+        if selected_miou is not None:
+            metrics[self.selected_metric_name] = selected_miou
 
         # each class table
         ret_metrics.pop('aAcc', None)

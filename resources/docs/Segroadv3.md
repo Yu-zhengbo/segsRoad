@@ -7,10 +7,10 @@ Zhengbo Yu, Zhe Chen, binbin Li, RuiTing Hu, Xingyu Bai, Qiaoran He, Li Sun, Zho
 ## Abstract
 This paper proposes SegRoadv3, a novel road extraction model that integrates state space modeling with diffusion-based generation for remote sensing imagery. Unlike conventional methods that rely on direct pixel-wise classification, SegRoadv3 formulates road extraction as a progressive denoising process, reconstructing complete and coherent road structures from randomly perturbed inputs. The model employs a Deformable State Space backbone (DSMamba) to effectively capture global dependencies and directional continuity in road patterns. In the decoding phase, we introduce a Diagonal Mamba (DiagMamba) module to enhance fine-grained structural representations through multi-step denoising. Additionally, a Pixel Connectivity Structure (PCS) is incorporated as an auxiliary supervision strategy to explicitly improve connectivity in occluded or fragmented regions. Extensive experiments demonstrate that SegRoadv3 achieves new state-of-the-art (SOTA) performance, reaching an IoU of 71.06% on the DeepGlobe dataset and 66.57% on the CHN6-CUG dataset. Moreover, SegRoadv3 significantly enhances the completeness and continuity of road extraction results. To the best of our knowledge, this is the first attempt to integrate Mamba and diffusion mechanisms for road extraction, providing a new paradigm for structure-aware and generative segmentation in remote sensing applications. The corresponding code is publicly available at https://github.com/Yu-zhengbo/segsRoad.
 
-![alt text](./resources/segformerv3.png)
+![SegRoadv3 overview](../segformerv3.png)
 ## Installation
 
-See [MMSegmentation installation instructions](./README_zh-CN.md) and <a href='https://github.com/MzeroMiko/VMamba'>VMmamba installation instructions</a>
+See [MMSegmentation installation instructions](../../README_zh-CN.md) and <a href='https://github.com/MzeroMiko/VMamba'>VMmamba installation instructions</a>
 
 Then 
 ````python

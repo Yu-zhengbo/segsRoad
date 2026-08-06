@@ -44,77 +44,68 @@ class MultiFrequencyChannelAttention(nn.Module):
                  frequency_branches=16,
                  frequency_selection='top',
                  reduction=16):
-        super(MultiFrequencyChannelAttention, self).__init__()
-
+        super().__init__()
         assert frequency_branches in [1, 2, 4, 8, 16, 32]
-        frequency_selection = frequency_selection + str(frequency_branches)
 
+        self.in_channels = in_channels
         self.num_freq = frequency_branches
         self.dct_h = dct_h
         self.dct_w = dct_w
 
-        mapper_x, mapper_y = get_freq_indices(frequency_selection)
-        self.num_split = len(mapper_x)
-        mapper_x = [temp_x * (dct_h // 7) for temp_x in mapper_x]
-        mapper_y = [temp_y * (dct_w // 7) for temp_y in mapper_y]
+        freq_x, freq_y = get_freq_indices(f'{frequency_selection}{frequency_branches}')
+        freq_x = [x * (dct_h // 7) for x in freq_x]
+        freq_y = [y * (dct_w // 7) for y in freq_y]
+        self.num_split = len(freq_x)
+        self.register_buffer('dct_weights', self._build_dct_bank(freq_x, freq_y))
 
-        assert len(mapper_x) == len(mapper_y)
-
-        # fixed DCT init
-        for freq_idx in range(frequency_branches):
-            self.register_buffer('dct_weight_{}'.format(freq_idx), self.get_dct_filter(dct_h, dct_w, mapper_x[freq_idx], mapper_y[freq_idx], in_channels))
-
+        mid_channels = in_channels // reduction
         self.fc = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels // reduction, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.Conv2d(in_channels, mid_channels, kernel_size=1, stride=1, padding=0, bias=False),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels // reduction, in_channels, kernel_size=1, stride=1, padding=0, bias=False))
-
-        self.average_channel_pooling = nn.AdaptiveAvgPool2d(1)
-        self.max_channel_pooling = nn.AdaptiveMaxPool2d(1)
+            nn.Conv2d(mid_channels, in_channels, kernel_size=1, stride=1, padding=0, bias=False))
 
     def forward(self, x):
-        batch_size, C, H, W = x.shape
+        pooled = self._resize_to_dct(x)
+        avg_score, max_score, min_score = self._frequency_pool(pooled)
+        attention = torch.sigmoid(
+            self.fc(avg_score) + self.fc(max_score) + self.fc(min_score))
+        return x * attention
 
-        x_pooled = x
+    def _resize_to_dct(self, x):
+        if x.shape[-2:] == (self.dct_h, self.dct_w):
+            return x
+        return F.adaptive_avg_pool2d(x, (self.dct_h, self.dct_w))
 
-        if H != self.dct_h or W != self.dct_w:
-            x_pooled = torch.nn.functional.adaptive_avg_pool2d(x, (self.dct_h, self.dct_w))
+    def _frequency_pool(self, x):
+        spectral = x.unsqueeze(1) * self.dct_weights.unsqueeze(0)
+        avg_score = spectral.mean(dim=(-1, -2)).mean(dim=1)
+        max_score = spectral.amax(dim=(-1, -2)).mean(dim=1)
+        min_score = spectral.amin(dim=(-1, -2)).mean(dim=1)
+        return tuple(item[:, :, None, None] for item in (avg_score, max_score, min_score))
 
-        multi_spectral_feature_avg, multi_spectral_feature_max, multi_spectral_feature_min = 0, 0, 0
-        for name, params in self.state_dict().items():
-            if 'dct_weight' in name:
-                x_pooled_spectral = x_pooled * params
-                multi_spectral_feature_avg += self.average_channel_pooling(x_pooled_spectral)
-                multi_spectral_feature_max += self.max_channel_pooling(x_pooled_spectral)
-                multi_spectral_feature_min += -self.max_channel_pooling(-x_pooled_spectral)
-        multi_spectral_feature_avg = multi_spectral_feature_avg / self.num_freq
-        multi_spectral_feature_max = multi_spectral_feature_max / self.num_freq
-        multi_spectral_feature_min = multi_spectral_feature_min / self.num_freq
+    def _build_dct_bank(self, freq_x, freq_y):
+        basis_x = self._dct_basis(self.dct_h, freq_x)
+        basis_y = self._dct_basis(self.dct_w, freq_y)
+        filters = basis_x[:, :, None] * basis_y[:, None, :]
+        return filters[:, None].repeat(1, self.in_channels, 1, 1)
 
+    @staticmethod
+    def _dct_basis(length, frequencies):
+        pos = torch.arange(length, dtype=torch.float64) + 0.5
+        freq = torch.tensor(frequencies, dtype=torch.float64).unsqueeze(1)
+        basis = torch.cos(math.pi * freq * pos / length) / math.sqrt(length)
+        basis[freq.squeeze(1) != 0] *= math.sqrt(2)
+        return basis.float()
 
-        multi_spectral_avg_map = self.fc(multi_spectral_feature_avg).view(batch_size, C, 1, 1)
-        multi_spectral_max_map = self.fc(multi_spectral_feature_max).view(batch_size, C, 1, 1)
-        multi_spectral_min_map = self.fc(multi_spectral_feature_min).view(batch_size, C, 1, 1)
-
-        multi_spectral_attention_map = F.sigmoid(multi_spectral_avg_map + multi_spectral_max_map + multi_spectral_min_map)
-
-        return x * multi_spectral_attention_map.expand_as(x)
-
-    def get_dct_filter(self, tile_size_x, tile_size_y, mapper_x, mapper_y, in_channels):
-        dct_filter = torch.zeros(in_channels, tile_size_x, tile_size_y)
-
-        for t_x in range(tile_size_x):
-            for t_y in range(tile_size_y):
-                dct_filter[:, t_x, t_y] = self.build_filter(t_x, mapper_x, tile_size_x) * self.build_filter(t_y, mapper_y, tile_size_y)
-
-        return dct_filter
-
-    def build_filter(self, pos, freq, POS):
-        result = math.cos(math.pi * freq * (pos + 0.5) / POS) / math.sqrt(POS)
-        if freq == 0:
-            return result
-        else:
-            return result * math.sqrt(2)
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
+                              missing_keys, unexpected_keys, error_msgs):
+        bank_key = prefix + 'dct_weights'
+        legacy_keys = [prefix + f'dct_weight_{i}' for i in range(self.num_freq)]
+        if bank_key not in state_dict and all(key in state_dict for key in legacy_keys):
+            state_dict[bank_key] = torch.stack([state_dict.pop(key) for key in legacy_keys])
+        super()._load_from_state_dict(
+            state_dict, prefix, local_metadata, strict,
+            missing_keys, unexpected_keys, error_msgs)
 
 class MFMSAttentionBlock(nn.Module):
     def __init__(self,

@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/potsdam.py',
+    '../_base_/datasets/potsdam_sam.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 
@@ -21,12 +21,12 @@ model = dict(
     backbone=dict(
         type='SAM3VitComer',
         ),
-    neck=dict(
-        type='DINONeck',
-        in_channels=1024,
-        num_in=4,
-        upsample='bicubic',
-    ),
+    # neck=dict(
+    #     type='DINONeck',
+    #     in_channels=1024,
+    #     num_in=4,
+    #     upsample='bicubic',
+    # ),
     decode_head=dict(
         type='UPerHead',
         in_channels=[1024, 1024, 1024, 1024],
@@ -135,5 +135,5 @@ param_scheduler = [
 ]
 
 default_hooks = dict(
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=40000),
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=80000, save_best='mIoU'),
 )
