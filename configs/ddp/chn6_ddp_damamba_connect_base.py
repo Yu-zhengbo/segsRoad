@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/chn6.py',
+    '../_base_/datasets/chn6_dino.py',
     '../_base_/default_runtime.py',
     '../_base_/schedules/schedule_80k.py'
 ]
@@ -27,7 +27,7 @@ model = dict(
     accumulation=True,
     pretrained=None,
     backbone=dict(
-        pretrained='weights/DAMamba-B.pth',
+        pretrained='/data1/datasets/zhengbo/segsroad_model_weights/DAMamba-B.pth',
         type='DAMamba_base',
     ),
     neck=[
@@ -101,7 +101,7 @@ model = dict(
             use_sigmoid=False,
             loss_weight=1.0)),
     # model training and testing settings
-    # train_cfg=dict(),
+    train_cfg=dict(),
     test_cfg=dict(mode='whole'))
 
 optim_wrapper = dict(
@@ -129,6 +129,8 @@ param_scheduler = [
         by_epoch=False,
     )
 ]
+
+# train_cfg = dict(type='IterBasedTrainLoop', max_iters=80000, val_interval=50)
 train_dataloader = dict(batch_size=6, num_workers=6)
 val_dataloader = dict(batch_size=1, num_workers=1)
 test_dataloader = val_dataloader

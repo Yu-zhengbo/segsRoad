@@ -1,12 +1,8 @@
 _base_ = [
-    '../_base_/datasets/deepglobe.py',
+    '../_base_/datasets/chn6_dino.py',
     '../_base_/default_runtime.py',
     '../_base_/schedules/schedule_80k.py'
 ]
-checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/' \
-                  'swin_base_patch4_window7_224_20220317-e9b98025.pth'  # noqa
-# checkpoint_file = 'https://download.openmmlab.com/mmsegmentation/v0.5/pretrain/swin/swin_large_patch4_window7_224_22k_20220412-aeecf2aa.pth'  # noqa
-
 # model settings
 norm_cfg = dict(type='SyncBN', requires_grad=True)
 backbone_norm_cfg = dict(type='LN', requires_grad=True)
@@ -24,7 +20,7 @@ model = dict(
     data_preprocessor=data_preprocessor,
     timesteps=3,
     bit_scale=0.01,
-    accumulation=True,
+    accumulation=False,
     pretrained=None,
     backbone=dict(
         pretrained='/data1/datasets/zhengbo/segsroad_model_weights/DAMamba-B.pth',
@@ -71,25 +67,34 @@ model = dict(
         norm_cfg=norm_cfg,
         align_corners=False,
         num_feature_levels=1,
-        encoder=dict(
-            type='DetrTransformerEncoder',
-            num_layers=6,
-            transformerlayers=dict(
-                type='BaseTransformerLayer',
-                use_time_mlp=True,
-                attn_cfgs=dict(
-                    type='MultiScaleDeformableAttention',
-                    embed_dims=256,
-                    num_levels=1,
-                    num_heads=8,
-                    dropout=0.),
-                ffn_cfgs=dict(
-                    type='FFN',
-                    embed_dims=256,
-                    feedforward_channels=1024,
-                    ffn_drop=0.,
-                    act_cfg=dict(type='GELU')),
-                operation_order=('self_attn', 'norm', 'ffn', 'norm'))
+        use_mamba=True,
+        # encoder=dict(
+        #     type='DetrTransformerEncoder',
+        #     num_layers=6,
+        #     transformerlayers=dict(
+        #         type='BaseTransformerLayer',
+        #         use_time_mlp=True,
+        #         attn_cfgs=dict(
+        #             type='MultiScaleDeformableAttention',
+        #             embed_dims=256,
+        #             num_levels=1,
+        #             num_heads=8,
+        #             dropout=0.),
+        #         ffn_cfgs=dict(
+        #             type='FFN',
+        #             embed_dims=256,
+        #             feedforward_channels=1024,
+        #             ffn_drop=0.,
+        #             act_cfg=dict(type='GELU')),
+        #         operation_order=('self_attn', 'norm', 'ffn', 'norm'))
+        # ),
+        encoder = dict(
+            type='MambaDDPSequence',
+            in_chs=256,
+            depth=4,
+            token_mixer='DASSM',
+            head_dim=16,
+            mlp_ratio=4
         ),
         positional_encoding=dict(
             type='SinePositionalEncoding',
@@ -102,7 +107,9 @@ model = dict(
             loss_weight=1.0)),
     # model training and testing settings
     train_cfg=dict(),
-    test_cfg=dict(mode='whole'))
+    test_cfg=dict(mode='whole')
+    # test_cfg=dict(mode='slide', crop_size=(512,512), stride=(512, 512))
+    )
 
 optim_wrapper = dict(
     _delete_=True,
@@ -129,6 +136,7 @@ param_scheduler = [
         by_epoch=False,
     )
 ]
+# train_cfg = dict(type='IterBasedTrainLoop', max_iters=80000, val_interval=50)
 train_dataloader = dict(batch_size=6, num_workers=6)
-val_dataloader = dict(batch_size=6, num_workers=6)
+val_dataloader = dict(batch_size=1, num_workers=1)
 test_dataloader = val_dataloader

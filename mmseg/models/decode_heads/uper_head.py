@@ -21,9 +21,10 @@ class UPerHead(BaseDecodeHead):
             Module applied on the last feature. Default: (1, 2, 3, 6).
     """
 
-    def __init__(self, pool_scales=(1, 2, 3, 6), **kwargs):
+    def __init__(self, pool_scales=(1, 2, 3, 6),is_dino=False, **kwargs):
         super().__init__(input_transform='multiple_select', **kwargs)
         # PSP Module
+        self.is_dino = is_dino
         self.psp_modules = PPM(
             pool_scales,
             self.in_channels[-1],
@@ -96,6 +97,14 @@ class UPerHead(BaseDecodeHead):
         """
         inputs = self._transform_inputs(inputs)
 
+        if self.is_dino:
+            for i in range(2):
+                inputs[i] = resize(
+                    inputs[i],
+                    size=(inputs[-1].shape[-2] * 2**(2-i),inputs[-1].shape[-1]* 2**(2-i)),
+                    mode='bilinear',
+                    align_corners=self.align_corners)
+        
         # build laterals
         laterals = [
             lateral_conv(inputs[i])

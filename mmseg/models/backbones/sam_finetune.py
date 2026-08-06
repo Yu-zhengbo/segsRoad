@@ -238,6 +238,8 @@ class SAM3Register(SAM3Vit):
         checkpoint_path='/home/cz/codes/githubs/sam3/checkpoints/sam3.pt',
         num_register_tokens=4,
         freeze_base=True,
+        refined_weight='',
+        refined=False,
     ):
         if num_register_tokens <= 0:
             raise ValueError('num_register_tokens must be positive.')
@@ -249,6 +251,8 @@ class SAM3Register(SAM3Vit):
             compile_mode=compile_mode,
             eval_mode=eval_mode,
             checkpoint_path=checkpoint_path,
+            refined_weight=refined_weight,
+            refined=refined,
         )
 
         embed_dim = self.model.patch_embed.proj.out_channels
@@ -392,6 +396,8 @@ class SAM3WindowRegister(SAM3Register):
         num_register_tokens=4,
         num_local_register_tokens=4,
         freeze_base=True,
+        refined_weight='',
+        refined=False,
     ):
         if num_local_register_tokens <= 0:
             raise ValueError('num_local_register_tokens must be positive.')
@@ -404,6 +410,8 @@ class SAM3WindowRegister(SAM3Register):
             checkpoint_path=checkpoint_path,
             num_register_tokens=num_register_tokens,
             freeze_base=freeze_base,
+            refined_weight=refined_weight,
+            refined=refined,
         )
 
         embed_dim = self.model.patch_embed.proj.out_channels

@@ -1,6 +1,6 @@
 _base_ = [
     '../_base_/datasets/loveda.py',
-    '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
+    '../_base_/default_runtime.py', '../_base_/schedules/schedule_20k.py'
 ]
 
 crop_size = (560, 560)
@@ -19,14 +19,10 @@ model = dict(
     data_preprocessor=data_preprocessor,
     backbone=dict(
         type='SAM3Vit',
-        refined=True,
-        refined_weight="/data/openclaw/UniRefiner/outputs/sam3/checkpoints/model_final.pt"
     ),
     decode_head=dict(
         type='UPerHead',
-        # in_channels=[128, 256, 512, 1024],
         in_channels=[1024, 1024, 1024, 1024],
-        # in_channels=[512, 1024, 2048, 4096],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
         channels=512,
@@ -36,66 +32,6 @@ model = dict(
         align_corners=False,
         loss_decode=dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
-    
-    
-    # neck=dict(
-    #     type='MLANeck',
-    #     in_channels=[1024, 1024, 1024, 1024],
-    #     out_channels=256,
-    #     norm_cfg=norm_cfg,
-    #     act_cfg=dict(type='ReLU'),
-    # ),
-    # decode_head=dict(
-    #     type='SETRMLAHead',
-    #     in_channels=(256, 256, 256, 256),
-    #     channels=512,
-    #     in_index=(0, 1, 2, 3),
-    #     dropout_ratio=0,
-    #     mla_channels=128,
-    #     num_classes=2,
-    #     norm_cfg=norm_cfg,
-    #     align_corners=False,
-    #     loss_decode=dict(
-    #         type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
-    
-    # decode_head=dict(
-    #     type='FCNHead',
-    #     in_channels=1024,
-    #     in_index=0,
-    #     channels=512,
-    #     num_convs=2,
-    #     concat_input=True,
-    #     dropout_ratio=0.1,
-    #     num_classes=2,
-    #     norm_cfg=norm_cfg,
-    #     align_corners=False,
-    #     loss_decode=[
-    #         dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-    #         # dict(type='ConnectivityLoss', loss_weight=1.0, num_seeds=32, num_steps=10,
-    #         #      downsample_scale=0.25)
-    #         # dict(
-    #         #     type='NeighborLoss',
-    #         #     neigh_size=3,
-    #         #     k = 1
-    #         # )
-    #     ]),
-    # auxiliary_head=dict(
-    #     type='FCNHead',
-    #     in_channels=1024,
-    #     in_index=2,
-    #     channels=256,
-    #     num_convs=1,
-    #     concat_input=False,
-    #     dropout_ratio=0.1,
-    #     num_classes=2,
-    #     norm_cfg=norm_cfg,
-    #     align_corners=False,
-    #     # loss_decode=dict(
-    #     #     type='CrossEntropyLoss', use_sigmoid=False, loss_weight=0.4)
-    #     # ),
-    #     loss_decode = dict(type='ConnectivityLoss', loss_weight=0.4, num_seeds=32,
-    #                        num_steps=10, downsample_scale=0.5)),
-    # model training and testing settings
     train_cfg=dict(),
     test_cfg=dict(mode='whole'))
 
@@ -125,7 +61,7 @@ param_scheduler = [
         eta_min=0.0,
         power=1.0,
         begin=1500,
-        end=40000,
+        end=20000,
         by_epoch=False,
     )
 ]

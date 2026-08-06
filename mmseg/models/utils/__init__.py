@@ -17,6 +17,8 @@ from .up_conv_block import UpConvBlock
 from .wrappers import Upsample, resize
 from .san_layers import MLP, LayerNorm2d, cross_attn_layer
 from .fdconv import FDConv
+from .dysample import DySample
+from .fade import FADE
 
 __all__ = [
     'ResLayer', 'SelfAttentionBlock', 'make_divisible', 'InvertedResidual',
@@ -25,4 +27,5 @@ __all__ = [
     'Upsample', 'resize', 'DAPPM', 'PAPPM', 'BasicBlock', 'Bottleneck',
     'cross_attn_layer', 'LayerNorm2d', 'MLP',
     'get_uncertain_point_coords_with_randomness','FDConv',
+    'DySample', 'FADE'
 ]

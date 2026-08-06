@@ -16,7 +16,7 @@ from mmseg.models.backbones.sam3.sam3.model.vitdet import ViT,get_abs_pos,PatchE
 
 
 REFINED_SAM3_CHECKPOINT_PATH = (
-    "/data/openclaw/UniRefiner/outputs/sam3/checkpoints/model_final.pt"
+    "/data/openclaw/UniRefiner/outputs_1/sam3/checkpoints/model_final.pt"
 )
 
 
@@ -692,7 +692,7 @@ class Adapter(nn.Module):
             param.requires_grad = False
 
 @MODELS.register_module()
-class SAM3VitUnetAdapter(BaseModule):
+class SAM3VitUnetAdapter(SAM3Vit):
     def __init__(self,img_size=1008,
                  compile_mode=None,
                  eval_mode=True,
@@ -701,41 +701,14 @@ class SAM3VitUnetAdapter(BaseModule):
                  interaction_indexes=[7, 15, 23, 31],
                  ):
                  
-        super().__init__()
-        self.checkpoint_path = checkpoint_path
+        super().__init__(
+            img_size=img_size,
+            compile_mode=compile_mode,
+            eval_mode=eval_mode,
+            checkpoint_path=checkpoint_path,
+        )
         self.use_act_checkpoint = use_act_checkpoint
         self.interaction_indexes = interaction_indexes
-        
-        self.model = ViT(
-            img_size=img_size,
-            pretrain_img_size=336,
-            patch_size=14,
-            embed_dim=1024,
-            depth=32,
-            num_heads=16,
-            mlp_ratio=4.625,
-            norm_layer="LayerNorm",
-            drop_path_rate=0.1,
-            qkv_bias=True,
-            use_abs_pos=True,
-            tile_abs_pos=True,
-            global_att_blocks=(7, 15, 23, 31),
-            rel_pos_blocks=(),
-            use_rope=True,
-            use_interp_rope=True,
-            window_size=24,
-            pretrain_use_cls_token=True,
-            retain_cls_token=False,
-            ln_pre=True,
-            ln_post=False,
-            return_interm_layers=True,
-            bias_patch_embed=False,
-            compile_mode=compile_mode,
-        )
-        _load_checkpoint(self.model, checkpoint_path)
-        if eval_mode:
-            self.model.eval()
-        self.freeze_model()
        
         blocks = []
         for block in self.model.blocks:
@@ -746,6 +719,7 @@ class SAM3VitUnetAdapter(BaseModule):
             *blocks
         )
         self.scale = dict(zip(interaction_indexes,[4,2,1,0.5]))
+        self.freeze_model()
        
     def forward(self,x):
         x = self.model.patch_embed(x)
@@ -778,19 +752,20 @@ class SAM3VitUnetAdapter(BaseModule):
         return outputs
     
     def train(self, mode: bool = True):
-        super().train(mode)
-        self.model.eval()
-        for param in self.model.parameters():
-            param.requires_grad = False
+        nn.Module.train(self, mode)
+        self.freeze_model()
         return self
     
     def freeze_model(self):
         for param in self.model.parameters():
             param.requires_grad = False
+        for module in self.model.blocks:
+            if isinstance(module, Adapter):
+                for param in module.prompt_learn.parameters():
+                    param.requires_grad = True
         self.model.eval()
     
     def init_weights(self):
-        _load_checkpoint(self.model, self.checkpoint_path)
         pass
 
 
@@ -925,7 +900,7 @@ class PromptGenerator(nn.Module):
 
 
 @MODELS.register_module()
-class SAM3VitFftAdapter(BaseModule):
+class SAM3VitFftAdapter(SAM3Vit):
     def __init__(self,img_size=1008,
                  compile_mode=None,
                  eval_mode=True,
@@ -934,41 +909,14 @@ class SAM3VitFftAdapter(BaseModule):
                  interaction_indexes=[7, 15, 23, 31],
                  ):
                  
-        super().__init__()
-        self.checkpoint_path = checkpoint_path
+        super().__init__(
+            img_size=img_size,
+            compile_mode=compile_mode,
+            eval_mode=eval_mode,
+            checkpoint_path=checkpoint_path,
+        )
         self.use_act_checkpoint = use_act_checkpoint
         self.interaction_indexes = interaction_indexes
-        
-        self.model = ViT(
-            img_size=img_size,
-            pretrain_img_size=336,
-            patch_size=14,
-            embed_dim=1024,
-            depth=32,
-            num_heads=16,
-            mlp_ratio=4.625,
-            norm_layer="LayerNorm",
-            drop_path_rate=0.1,
-            qkv_bias=True,
-            use_abs_pos=True,
-            tile_abs_pos=True,
-            global_att_blocks=(7, 15, 23, 31),
-            rel_pos_blocks=(),
-            use_rope=True,
-            use_interp_rope=True,
-            window_size=24,
-            pretrain_use_cls_token=True,
-            retain_cls_token=False,
-            ln_pre=True,
-            ln_post=False,
-            return_interm_layers=True,
-            bias_patch_embed=False,
-            compile_mode=compile_mode,
-        )
-        _load_checkpoint(self.model, checkpoint_path)
-        if eval_mode:
-            self.model.eval()
-        self.freeze_model()
         
         self.prompt_generator = PromptGenerator(scale_factor=32, embed_dim=1024,depth=32,
                                                 input_type='fft', freq_nums=0.25,
@@ -1011,26 +959,13 @@ class SAM3VitFftAdapter(BaseModule):
                 outputs.append(feats)
         return outputs
     
-    def train(self, mode: bool = True):
-        super().train(mode)
-        self.model.eval()
-        for param in self.model.parameters():
-            param.requires_grad = False
-        return self
-    
-    def freeze_model(self):
-        for param in self.model.parameters():
-            param.requires_grad = False
-        self.model.eval()
-    
     def init_weights(self):
-        _load_checkpoint(self.model, self.checkpoint_path)
         pass
 
 
 
 @MODELS.register_module()
-class SAM3VitComer(BaseModule):
+class SAM3VitComer(SAM3Vit):
     def __init__(self,img_size=1008,
                  compile_mode=None,
                  eval_mode=True,
@@ -1057,38 +992,12 @@ class SAM3VitComer(BaseModule):
                  norm_layer = partial(nn.LayerNorm, eps=1e-6),
                  ):
                  
-        super().__init__()
-        self.checkpoint_path = checkpoint_path
-        self.model = ViT(
+        super().__init__(
             img_size=img_size,
-            pretrain_img_size=336,
-            patch_size=14,
-            embed_dim=1024,
-            depth=32,
-            num_heads=16,
-            mlp_ratio=4.625,
-            norm_layer="LayerNorm",
-            drop_path_rate=0.1,
-            qkv_bias=True,
-            use_abs_pos=True,
-            tile_abs_pos=True,
-            global_att_blocks=(7, 15, 23, 31),
-            rel_pos_blocks=(),
-            use_rope=True,
-            use_interp_rope=True,
-            window_size=24,
-            pretrain_use_cls_token=True,
-            retain_cls_token=False,
-            ln_pre=True,
-            ln_post=False,
-            return_interm_layers=True,
-            bias_patch_embed=False,
             compile_mode=compile_mode,
+            eval_mode=eval_mode,
+            checkpoint_path=checkpoint_path,
         )
-        _load_checkpoint(self.model, checkpoint_path)
-        if eval_mode:
-            self.model.eval()
-        self.freeze_model()
        
         ## adapter
         self.interaction_indexes = interaction_indexes
@@ -1185,20 +1094,7 @@ class SAM3VitComer(BaseModule):
         f4 = self.norm4(c4)
         return [f1, f2, f3, f4]
     
-    def train(self, mode: bool = True):
-        super().train(mode)
-        self.model.eval()
-        for param in self.model.parameters():
-            param.requires_grad = False
-        return self
-    
-    def freeze_model(self):
-        for param in self.model.parameters():
-            param.requires_grad = False
-        self.model.eval()
-    
     def init_weights(self):
-        _load_checkpoint(self.model, self.checkpoint_path)
         pass
     
     
@@ -1220,14 +1116,6 @@ class SAM3VitComer(BaseModule):
             m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
             if m.bias is not None:
                 m.bias.data.zero_()
-    def train(self, mode: bool = True):
-        # 先调用父类，保证外层模块状态正常
-        super().train(mode)
-        self.model.eval()
-        for param in self.model.parameters():
-            param.requires_grad = False
-        return self
-    
     def _add_level_embed(self, c2, c3, c4):
         c2 = c2 + self.level_embed[0]
         c3 = c3 + self.level_embed[1]

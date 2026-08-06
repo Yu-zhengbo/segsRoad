@@ -12,7 +12,7 @@ for file in ./target/chn6/*.p; do
 done
 
 # source directory
-dir=output/chn6/mask2former
+dir=output/chn6/segroadv3
 
 # source directory
 # dir=$1

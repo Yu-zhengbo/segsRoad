@@ -16,25 +16,24 @@ from mmengine.model import BaseModule,ModuleList
 from mmengine import ConfigDict
 from torch.nn.modules.utils import _pair as to_2tuple
 from mmseg.models.backbones.damamba import DASSM,Block,LayerNorm,ResDWC,ConvFFN,DropPath
-from mmseg.utils.diag_scan import DiagScanModule,FastDiagScan
+from mmseg.utils.diag_scan import DiagScanModule, FastDirectionalScan
 
 class DASSM(DASSM):
-    def __init__(self,scan, *args, **kwargs):
+    def __init__(self, scan, directions, *args, **kwargs):
         super(DASSM, self).__init__(*args, **kwargs)
         self.scan = scan
-        self.cache = {self.scan.H:self.scan}
+        self.directions = directions
+        self.cache = {(self.scan.H, self.scan.W): self.scan}
 
     def ssm(self, x: torch.Tensor):
         B, C, H, W = x.shape
         L = H * W
-        if H not in self.cache:
-            self.cache[H] = FastDiagScan(H, W).to(x.device)
-            # self.scan = self.cache[H]
-        x_rd, x_ld = self.cache[H](x)
-        x = x.view(B,-1, L)
-        x_inv = torch.flip(x,[-1])
-
-        xs = torch.cat([x.unsqueeze(1), x_inv.unsqueeze(1), x_rd.unsqueeze(1), x_ld.unsqueeze(1)], dim=1)
+        scan_key = (H, W)
+        if scan_key not in self.cache:
+            self.cache[scan_key] = FastDirectionalScan(H, W).to(x.device)
+        scan = self.cache[scan_key]
+        xs = torch.stack(
+            [scan.scan(x, direction) for direction in self.directions], dim=1)
 
         x_dbl = torch.matmul(self.x_proj_weight.view(1, -1, C), xs)
         dts, Bs, Cs = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=2)
@@ -54,10 +53,10 @@ class DASSM(DASSM):
         #     return_last_state=False,
         # )
         hs = []
-        for i in range(4):
+        for i in range(len(self.directions)):
             h = self.selective_scan(
-                xs[:,0,], dts[:,0],
-                As, Bs[:,0], None,
+                xs[:,i,], dts[:,i],
+                As, Bs[:,i], None,
                 z=None,
                 delta_bias=dt_projs_bias,
                 delta_softplus=True,
@@ -69,18 +68,16 @@ class DASSM(DASSM):
         y = h * Cs
         y = y + xs * Ds.view(-1, 1)
 
-        y_rd = self.cache[H].recover(y[:,2], 'rd')
-        y_ld = self.cache[H].recover(y[:,3], 'ld')
-        y_inv = torch.flip(y[:,1],[-1])
-        y = y[:,0] + y_rd + y_ld + y_inv
-
-        return y
+        return sum(
+            scan.recover(y[:, i], direction)
+            for i, direction in enumerate(self.directions))
 
 @MODELS.register_module()
 class MambaDDPBlock(nn.Module):
     def __init__(
         self,
         scan,
+        directions,
         dim,
         token_mixer=nn.Identity,
         head_dim=24,
@@ -92,7 +89,8 @@ class MambaDDPBlock(nn.Module):
         norm_cfg=dict(type='SyncBN', requires_grad=True)
     ):
         super().__init__()
-        self.token_mixer = token_mixer(scan, dim, head_dim=head_dim)
+        self.token_mixer = token_mixer(
+            scan, directions=directions, d_model=dim, head_dim=head_dim)
 
         self.norm1 = LayerNorm(dim, eps=1e-6)
         self.norm2 = build_norm_layer(norm_cfg, dim)[1]
@@ -158,17 +156,21 @@ class MambaDDPSequence(BaseModule):
     ):
         super().__init__()
         self.grad_checkpointing = False
-        # self.scan = DiagScanModule(128,128)
-        self.scan = FastDiagScan(128,128)
+        self.scan = FastDirectionalScan(128, 128)
         self.embed_dims = in_chs
 
         drop_path_rates = drop_path_rates or [0.] * depth
         self.stage_blocks = nn.ModuleList()
         if token_mixer == 'DASSM':
             token_mixer = DASSM
+        forward_directions = ('h_lr', 'diag_ur', 'v_tb', 'diag_dr')
+        reverse_directions = ('h_rl', 'diag_dl', 'v_bt', 'diag_ul')
         for i in range(depth):
+            directions = (forward_directions if i % 2 == 0
+                          else reverse_directions)
             self.stage_blocks.append(MambaDDPBlock(
                 scan=self.scan,
+                directions=directions,
                 dim=in_chs,
                 drop_path=drop_path_rates[i],
                 token_mixer=token_mixer,

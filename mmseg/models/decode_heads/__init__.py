@@ -3,6 +3,7 @@ from .ann_head import ANNHead
 from .apc_head import APCHead
 from .aspp_head import ASPPHead
 from .cc_head import CCHead
+from .coanet_head import CoANetHead
 from .da_head import DAHead
 from .ddr_head import DDRHead
 from .dm_head import DMHead
@@ -43,9 +44,10 @@ from .mfa_pcs_uper_head import MFAPCSUPerHead
 from .DenoiseUNet import DenoiseUNet
 from .mkunet_head import MKHead
 from .sam_head import SamHead
-from .pca_head import PCADecoder
+from .pca_head import PCADecoder,DyPCADecoder,DyShuffleDecoder,MFCADyPCADecoder,ConcatMFCADyPCADecoder
 __all__ = [
     'FCNHead', 'PSPHead', 'ASPPHead', 'PSAHead', 'NLHead', 'GCHead', 'CCHead',
+    'CoANetHead',
     'UPerHead', 'UPerHeadForDINO', 'DepthwiseSeparableASPPHead', 'ANNHead', 'DAHead', 'OCRHead',
     'EncHead', 'DepthwiseSeparableFCNHead', 'FPNHead', 'EMAHead', 'DNLHead',
     'PointHead', 'APCHead', 'DMHead', 'LRASPPHead', 'SETRUPHead',
@@ -54,5 +56,5 @@ __all__ = [
     'KernelUpdateHead', 'KernelUpdator', 'MaskFormerHead', 'Mask2FormerHead',
     'LightHamHead', 'PIDHead', 'DDRHead', 'VPDDepthHead', 'SideAdapterCLIPHead',
     'DeformableHeadWithTime','DeformableHeadWithTimeConnect','MFAUPerHead',
-    'MFAPCSUPerHead','DenoiseUNet','MKHead','SamHead','PCADecoder'
+    'MFAPCSUPerHead','DenoiseUNet','MKHead','SamHead','PCADecoder','DyPCADecoder','DyShuffleDecoder','MFCADyPCADecoder','ConcatMFCADyPCADecoder',
 ]

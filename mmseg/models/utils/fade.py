@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn.init import xavier_uniform_
 import torch.nn.functional as F
 import einops
-
+from mmseg.registry import MODELS
 
 class GateGenerator(nn.Module):
     def __init__(self, in_channels):
@@ -73,7 +73,7 @@ class CARAFE(nn.Module):
                              r1=ratio)
         x = torch.einsum('bkchw,bkhw->bchw',[x, kernel])
         return x
-
+@MODELS.register_module()
 class FADE(nn.Module):
     def __init__(self, in_channels_en, in_channels_de=None, scale=2, up_kernel_size=5):
         super(FADE, self).__init__()

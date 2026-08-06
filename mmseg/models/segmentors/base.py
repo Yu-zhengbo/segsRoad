@@ -168,11 +168,18 @@ class BaseSegmentor(BaseModel, metaclass=ABCMeta):
                 flip = img_meta.get('flip', None)
                 if flip:
                     flip_direction = img_meta.get('flip_direction', None)
-                    assert flip_direction in ['horizontal', 'vertical']
+                    assert flip_direction in [
+                        'horizontal', 'vertical', 'diagonal'
+                    ]
                     if flip_direction == 'horizontal':
                         i_seg_logits = i_seg_logits.flip(dims=(3, ))
-                    else:
+                    elif flip_direction == 'vertical':
                         i_seg_logits = i_seg_logits.flip(dims=(2, ))
+                    else:
+                        # ``diagonal`` is equivalent to applying both a
+                        # horizontal and a vertical flip.  Undo both before
+                        # resizing and merging TTA predictions.
+                        i_seg_logits = i_seg_logits.flip(dims=(2, 3))
 
                 # resize as original shape
                 i_seg_logits = resize(

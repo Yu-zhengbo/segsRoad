@@ -354,7 +354,7 @@ class DinoV3Vit(BaseModule):
 
 
 @MODELS.register_module()
-class DINO3Register(BaseModule):
+class DINO3Register(DinoV3Vit):
     """DINOv3 ViT backbone with additional learnable register tokens."""
 
     def __init__(
@@ -367,27 +367,23 @@ class DINO3Register(BaseModule):
             checkpoint=None,
             checkpoint_lora_alpha=16.0,
         ):
-        super(DINO3Register, self).__init__()
         if num_register_tokens <= 0:
             raise ValueError('num_register_tokens must be positive.')
 
-        feature_model = timm.create_model(
-            model,
+        super().__init__(
+            model=model,
             pretrained=pretrained,
             features_only=True,
             out_indices=out_indices,
+            freeze=freeze,
+            use_lora=False,
+            checkpoint=checkpoint,
+            checkpoint_lora_alpha=checkpoint_lora_alpha,
         )
+        feature_model = self.dinov3
         self.dinov3 = feature_model.model
-        if checkpoint is not None:
-            _load_unirefiner_checkpoint(
-                self.dinov3,
-                checkpoint,
-                target_prefix='',
-                lora_alpha=checkpoint_lora_alpha,
-            )
         self.out_indices = tuple(feature_model.out_indices)
         self.norm_intermediates = feature_model.norm
-        self.freeze_backbone = freeze
         self.num_register_tokens = num_register_tokens
         self.num_original_prefix_tokens = self.dinov3.num_prefix_tokens
         self.num_total_prefix_tokens = (

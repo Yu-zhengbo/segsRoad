@@ -1,6 +1,6 @@
 # dataset settings
-dataset_type = 'ISPRSDataset'
-data_root = '/data/datasets/rs/Vaihingen'
+dataset_type = 'PotsdamDataset'
+data_root = '/data/datasets/rs/Potsdam'
 crop_size = (512, 512)
 train_pipeline = [
     dict(type='LoadImageFromFile'),
@@ -8,16 +8,29 @@ train_pipeline = [
     dict(
         type='RandomResize',
         scale=(512, 512),
-        ratio_range=(0.5, 2.0),
+        ratio_range=(0.75, 1.5),
         keep_ratio=True),
-    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.75),
+    dict(type='RandomCrop', crop_size=crop_size, cat_max_ratio=0.95),
     dict(type='RandomFlip', prob=0.5),
+    dict(
+        type='RandomChoice',
+        transforms=[
+            [dict(type='RandomRotate', prob=1.0, degree=(0, 0),
+                pad_val=0, seg_pad_val=255)],
+            [dict(type='RandomRotate', prob=1.0, degree=(90, 90),
+                pad_val=0, seg_pad_val=255)],
+            [dict(type='RandomRotate', prob=1.0, degree=(180, 180),
+                pad_val=0, seg_pad_val=255)],
+            [dict(type='RandomRotate', prob=1.0, degree=(270, 270),
+                pad_val=0, seg_pad_val=255)],
+        ]
+    ),
     dict(type='PhotoMetricDistortion'),
     dict(type='PackSegInputs')
 ]
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(type='Resize', scale=(512, 512), keep_ratio=True),
+    dict(type='Resize', scale=(560,560), keep_ratio=True),
     # add loading annotation after ``Resize`` because ground truth
     # does not need to do resize data transform
     dict(type='LoadAnnotations', reduce_zero_label=True),
@@ -47,6 +60,7 @@ train_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
+        reduce_zero_label=True,
         data_prefix=dict(
             img_path='images/train', seg_map_path='annotations/train'),
         pipeline=train_pipeline))
@@ -58,9 +72,11 @@ val_dataloader = dict(
     dataset=dict(
         type=dataset_type,
         data_root=data_root,
+        reduce_zero_label=True,
         data_prefix=dict(img_path='images/val', seg_map_path='annotations/val'),
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
+
 
 val_evaluator = dict(
     type='IoUMetric',

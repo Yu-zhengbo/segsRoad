@@ -1,5 +1,5 @@
 _base_ = [
-    '../_base_/datasets/potsdam.py',
+    '../_base_/datasets/potsdam_sam.py',
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_40k.py'
 ]
 

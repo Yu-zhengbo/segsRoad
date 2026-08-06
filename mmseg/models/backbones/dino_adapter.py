@@ -20,6 +20,7 @@ from mmcv.ops.multi_scale_deform_attn import MultiScaleDeformableAttention
 # from torch.nn import Identity as MultiScaleDeformableAttention
 from mmseg.utils.transformer import BaseTransformerLayer
 from mmengine.config import ConfigDict
+from mmseg.models.backbones.dino import DinoV3Vit
 os.environ['HF_HUB_OFFLINE'] = '1'
 # torch.autograd.set_detect_anomaly(True)
 
@@ -454,10 +455,11 @@ class LoRA(nn.Module):
 
 
 @MODELS.register_module()
-class DINOAdapter(nn.Module):
+class DINOAdapter(DinoV3Vit):
     def __init__(
         self,
         model='vit_large_patch16_dinov3_qkvb.sat493m',             # 'vit_7b_patch16_dinov3.sat493m',
+        pretrained=True,
         embed_dim=1024,
         init_values=1e-6,
         drop_path_rate=0.3,
@@ -472,19 +474,14 @@ class DINOAdapter(nn.Module):
         add_vit_feature=True,
         freeze=True,
     ):
-        super().__init__()
-        self.eva = timm.create_model(
-            model,
-            pretrained=True,
+        super().__init__(
+            model=model,
+            pretrained=pretrained,
             features_only=True,
-        ).model
-        
-        
-        self.freeze_backbone = freeze
-        if freeze:
-            for param in self.eva.parameters():
-                param.requires_grad = False
-            self.eva.eval()
+            freeze=freeze,
+            use_lora=False,
+        )
+        self.eva = self.dinov3.model
         
         self.spm = SpatialPriorModule(inplanes=conv_inplane, embed_dim=embed_dim, with_cp=False)
         self.level_embed = nn.Parameter(torch.zeros(3, embed_dim))
@@ -633,13 +630,14 @@ class DINOAdapter(nn.Module):
             self.eva.eval()  # 冻结时也常常希望关掉 dropout
             for p in self.eva.parameters():
                 p.requires_grad = False
+        return self
 
 
 
 if __name__ == "__main__":
     # dinov3 = DinoV3ConvNeXt()     # 默认base模型
-    dinov3 = DinoV3Vit()
+    dinov3 = DINOAdapter()
     input = torch.randn(1, 3, 512, 512)
     # 打印每个特征图的shape，后续配置文件修改neck里的参数需要根据这个输出来。
     print([i.shape for i in dinov3(input)])
-
+    
